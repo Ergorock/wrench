@@ -1,5 +1,6 @@
 {
   "app": { "name": "Wrench" },
+  "common": { "close": "Fermer" },
   "nav": {
     "favorites": "Favoris",
     "settings": "Paramètres",
@@ -27,7 +28,9 @@
     "autostartUnavailable": "Le démarrage automatique n’est pas disponible dans cette installation.",
     "theme": "Thème",
     "themes": { "light": "Clair", "dark": "Sombre", "system": "Système" },
-    "toolVersion": "Version {version}"
+    "toolVersion": "Version {version}",
+    "languages": { "fr": "Français", "en": "English" },
+    "noTools": "Aucun outil n’est installé pour le moment."
   },
   "warnings": {
     "settings_recovered": "Le fichier de paramètres était illisible : il a été réinitialisé et une copie de sauvegarde a été conservée."

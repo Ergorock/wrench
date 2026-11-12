@@ -1,5 +1,6 @@
 {
   "app": { "name": "Wrench" },
+  "common": { "close": "Close" },
   "nav": {
     "favorites": "Favorites",
     "settings": "Settings",
@@ -27,7 +28,9 @@
     "autostartUnavailable": "Autostart is not available in this installation.",
     "theme": "Theme",
     "themes": { "light": "Light", "dark": "Dark", "system": "System" },
-    "toolVersion": "Version {version}"
+    "toolVersion": "Version {version}",
+    "languages": { "fr": "Français", "en": "English" },
+    "noTools": "No tools are installed yet."
   },
   "warnings": {
     "settings_recovered": "The settings file was unreadable: it has been reset and a backup copy was kept."
