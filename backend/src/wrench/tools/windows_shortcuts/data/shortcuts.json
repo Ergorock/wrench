@@ -1,0 +1,118 @@
+{
+  "groups": [
+    {
+      "id": "general",
+      "shortcuts": [
+        { "id": "start_menu", "keys": ["Win"] },
+        { "id": "quick_settings", "keys": ["Win", "A"] },
+        { "id": "search", "keys": ["Win", "S"] },
+        { "id": "settings", "keys": ["Win", "I"] },
+        { "id": "run_dialog", "keys": ["Win", "R"] },
+        { "id": "lock_pc", "keys": ["Win", "L"] },
+        { "id": "show_desktop", "keys": ["Win", "D"] },
+        { "id": "peek_desktop", "keys": ["Win", "Comma"] },
+        { "id": "minimize_all", "keys": ["Win", "M"] },
+        { "id": "restore_minimized", "keys": ["Win", "Shift", "M"] },
+        { "id": "quick_link_menu", "keys": ["Win", "X"] },
+        { "id": "notification_center", "keys": ["Win", "N"] },
+        { "id": "widgets", "keys": ["Win", "W"] },
+        { "id": "project", "keys": ["Win", "P"] },
+        { "id": "game_bar", "keys": ["Win", "G"] },
+        { "id": "clipboard_history", "keys": ["Win", "V"] },
+        { "id": "task_manager", "keys": ["Ctrl", "Shift", "Esc"] },
+        { "id": "security_screen", "keys": ["Ctrl", "Alt", "Del"] },
+        { "id": "switch_windows", "keys": ["Alt", "Tab"] },
+        { "id": "close_window", "keys": ["Alt", "F4"] }
+      ]
+    },
+    {
+      "id": "windows_snap",
+      "shortcuts": [
+        { "id": "snap_left", "keys": ["Win", "Left"] },
+        { "id": "snap_right", "keys": ["Win", "Right"] },
+        { "id": "maximize_window", "keys": ["Win", "Up"] },
+        { "id": "minimize_window", "keys": ["Win", "Down"] },
+        { "id": "snap_top_half", "keys": ["Win", "Alt", "Up"] },
+        { "id": "snap_bottom_half", "keys": ["Win", "Alt", "Down"] },
+        { "id": "restore_window", "keys": ["Win", "Shift", "Down"] },
+        { "id": "stretch_vertical", "keys": ["Win", "Shift", "Up"] },
+        { "id": "move_monitor_left", "keys": ["Win", "Shift", "Left"] },
+        { "id": "move_monitor_right", "keys": ["Win", "Shift", "Right"] },
+        { "id": "snap_layouts", "keys": ["Win", "Z"] }
+      ]
+    },
+    {
+      "id": "virtual_desktops",
+      "shortcuts": [
+        { "id": "task_view", "keys": ["Win", "Tab"] },
+        { "id": "new_desktop", "keys": ["Win", "Ctrl", "D"] },
+        { "id": "next_desktop", "keys": ["Win", "Ctrl", "Right"] },
+        { "id": "previous_desktop", "keys": ["Win", "Ctrl", "Left"] },
+        { "id": "close_desktop", "keys": ["Win", "Ctrl", "F4"] }
+      ]
+    },
+    {
+      "id": "explorer",
+      "shortcuts": [
+        { "id": "open_explorer", "keys": ["Win", "E"] },
+        { "id": "explorer_new_window", "keys": ["Ctrl", "N"] },
+        { "id": "explorer_new_tab", "keys": ["Ctrl", "T"] },
+        { "id": "explorer_close_tab", "keys": ["Ctrl", "W"] },
+        { "id": "explorer_next_tab", "keys": ["Ctrl", "Tab"] },
+        { "id": "explorer_previous_tab", "keys": ["Ctrl", "Shift", "Tab"] },
+        { "id": "explorer_new_folder", "keys": ["Ctrl", "Shift", "N"] },
+        { "id": "explorer_rename", "keys": ["F2"] },
+        { "id": "explorer_properties", "keys": ["Alt", "Enter"] },
+        { "id": "explorer_context_menu", "keys": ["Shift", "F10"] },
+        { "id": "explorer_delete_permanently", "keys": ["Shift", "Del"] },
+        { "id": "explorer_address_bar", "keys": ["Alt", "D"] },
+        { "id": "explorer_search_box", "keys": ["Ctrl", "E"] },
+        { "id": "explorer_back", "keys": ["Alt", "Left"] },
+        { "id": "explorer_forward", "keys": ["Alt", "Right"] },
+        { "id": "explorer_up", "keys": ["Alt", "Up"] },
+        { "id": "explorer_preview_pane", "keys": ["Alt", "P"] },
+        { "id": "explorer_details_pane", "keys": ["Alt", "Shift", "P"] }
+      ]
+    },
+    {
+      "id": "capture",
+      "shortcuts": [
+        { "id": "screenshot_region", "keys": ["Win", "Shift", "S"] },
+        { "id": "screenshot_full_to_file", "keys": ["Win", "PrtSc"] },
+        { "id": "screenshot_to_clipboard", "keys": ["PrtSc"] },
+        { "id": "screenshot_active_window", "keys": ["Alt", "PrtSc"] },
+        { "id": "record_screen", "keys": ["Win", "Shift", "R"] }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "shortcuts": [
+        { "id": "accessibility_settings", "keys": ["Win", "U"] },
+        { "id": "narrator", "keys": ["Win", "Ctrl", "Enter"] },
+        { "id": "narrator_settings", "keys": ["Win", "Ctrl", "N"] },
+        { "id": "magnifier_zoom_in", "keys": ["Win", "Plus"] },
+        { "id": "magnifier_zoom_out", "keys": ["Win", "Minus"] },
+        { "id": "magnifier_close", "keys": ["Win", "Esc"] },
+        { "id": "color_filters", "keys": ["Win", "Ctrl", "C"] },
+        { "id": "high_contrast", "keys": ["Alt", "Shift", "PrtSc"] },
+        { "id": "on_screen_keyboard", "keys": ["Win", "Ctrl", "O"] },
+        { "id": "voice_typing", "keys": ["Win", "H"] },
+        { "id": "voice_typing_focus", "keys": ["Win", "Alt", "H"] },
+        { "id": "speech_recognition", "keys": ["Win", "Ctrl", "S"] }
+      ]
+    },
+    {
+      "id": "typing",
+      "shortcuts": [
+        { "id": "emoji_panel", "keys": ["Win", "Period"] },
+        { "id": "next_input_language", "keys": ["Win", "Space"] },
+        { "id": "previous_input_language", "keys": ["Win", "Shift", "Space"] },
+        { "id": "paste_plain_text", "keys": ["Ctrl", "Shift", "V"] },
+        { "id": "undo", "keys": ["Ctrl", "Z"] },
+        { "id": "redo", "keys": ["Ctrl", "Y"] },
+        { "id": "find_text", "keys": ["Ctrl", "F"] },
+        { "id": "delete_word_left", "keys": ["Ctrl", "Backspace"] }
+      ]
+    }
+  ]
+}
