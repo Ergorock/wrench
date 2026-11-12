@@ -5,6 +5,7 @@ import { lucideIcon } from '../icons'
 import { useShell } from '../state'
 import { toolLoaders } from '../toolComponents'
 import HomeView from './HomeView.vue'
+import ToolLoadError from './ToolLoadError.vue'
 
 // The parent keys this view by tool id, so the props never change for an instance.
 const props = defineProps<{ toolId: string }>()
@@ -12,8 +13,9 @@ const props = defineProps<{ toolId: string }>()
 const { t } = useI18n()
 const { bootstrap } = useShell()
 const icon = computed(() => lucideIcon(bootstrap.value?.tools.find((x) => x.id === props.toolId)?.icon ?? 'box'))
-const loader = toolLoaders[props.toolId]
-const ToolComponent = loader ? defineAsyncComponent(loader) : null
+const ToolComponent = Object.hasOwn(toolLoaders, props.toolId)
+  ? defineAsyncComponent({ loader: toolLoaders[props.toolId], errorComponent: ToolLoadError })
+  : null
 </script>
 
 <template>

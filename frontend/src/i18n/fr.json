@@ -42,6 +42,7 @@
     "invalid_payload": "Les données envoyées sont invalides.",
     "invalid_settings": "Les paramètres fournis sont invalides.",
     "autostart_unavailable": "Le démarrage automatique n’est pas disponible.",
-    "internal_error": "Erreur interne de l’application."
+    "internal_error": "Erreur interne de l’application.",
+    "toolLoadFailed": "Cet outil n’a pas pu être chargé."
   }
 }
