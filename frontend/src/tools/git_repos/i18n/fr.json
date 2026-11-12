@@ -1,0 +1,95 @@
+{
+  "name": "Dépôts Git",
+  "description": "L’état de tous vos dépôts git d’un coup d’œil : récupérer, tirer, pousser et commiter sans terminal.",
+  "toolbar": {
+    "search": "Rechercher un dépôt…",
+    "all": "Tous",
+    "attention": "À traiter",
+    "fetchAll": "Tout récupérer",
+    "refresh": "Actualiser",
+    "folders": "Dossiers"
+  },
+  "badges": {
+    "ahead": "↑{n}",
+    "aheadTitle": "{n} commit(s) à pousser",
+    "behind": "↓{n}",
+    "behindTitle": "{n} commit(s) à tirer",
+    "changes": "● {n}",
+    "changesTitle": "{n} fichier(s) modifié(s) ou non suivi(s)",
+    "conflict": "⚠ conflit",
+    "operation": "{op} en cours",
+    "detached": "tête détachée",
+    "noRemote": "pas de distant",
+    "unpublished": "branche non publiée",
+    "upToDate": "✓ À jour",
+    "fetched": "Récupéré {when}",
+    "host": {
+      "github": "GitHub",
+      "gitea": "Gitea",
+      "other": "Autre hébergement"
+    },
+    "clearError": "Effacer l’erreur"
+  },
+  "actions": {
+    "fetch": "Récupérer",
+    "pull": "Tirer",
+    "push": "Pousser",
+    "commit": "Commit…",
+    "running": {
+      "fetch": "Récupération…",
+      "pull": "Tirage…",
+      "push": "Envoi…",
+      "commit": "Commit…"
+    }
+  },
+  "commit": {
+    "title": "Commiter {name}",
+    "summary": "Aucun fichier ne sera commité | 1 fichier sera commité | {n} fichiers seront commités",
+    "files": "Voir les fichiers",
+    "message": "Message du commit",
+    "placeholder": "Décrivez vos modifications",
+    "cancel": "Annuler",
+    "commit": "Commiter",
+    "commitAndPush": "Commiter et pousser"
+  },
+  "folders": {
+    "title": "Dossiers racines",
+    "hint": "Les dépôts git présents sous ces dossiers sont découverts automatiquement.",
+    "add": "Ajouter un dossier",
+    "remove": "Retirer",
+    "missing": "Dossier introuvable",
+    "depth": "Profondeur de recherche",
+    "none": "Aucun dossier pour l’instant.",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "empty": {
+    "noRoots": "Choisissez un ou plusieurs dossiers qui contiennent vos dépôts git.",
+    "addFolder": "Ajouter un dossier",
+    "noGit": "git est introuvable sur ce poste. Installez-le, par exemple avec la commande suivante, puis relancez Wrench :",
+    "noRepos": "Aucun dépôt git n’a été trouvé dans vos dossiers.",
+    "openFolders": "Modifier les dossiers",
+    "noMatch": "Aucun dépôt ne correspond."
+  },
+  "relative": {
+    "never": "jamais",
+    "now": "à l’instant",
+    "minutes": "il y a {n} min",
+    "hours": "il y a {n} h",
+    "days": "il y a {n} j"
+  },
+  "errors": {
+    "not_a_repo": "Ce dossier n’est plus un dépôt git.",
+    "diverged": "Les branches locale et distante ont divergé : impossible de tirer en avance rapide.",
+    "nothing_to_commit": "Il n’y a rien à commiter.",
+    "empty_message": "Le message du commit est obligatoire.",
+    "detached_head": "La tête est détachée : passez sur une branche d’abord.",
+    "in_progress": "Une opération git (merge, rebase…) est en cours dans ce dépôt.",
+    "no_remote": "Ce dépôt n’a pas de distant.",
+    "auth_required": "Authentification requise : connectez-vous au distant avec git une première fois.",
+    "timeout": "L’opération git a pris trop de temps.",
+    "git_failed": "La commande git a échoué.",
+    "unknown_repo": "Ce dépôt est inconnu : actualisez la liste.",
+    "git_not_found": "git est introuvable sur ce poste."
+  }
+}
