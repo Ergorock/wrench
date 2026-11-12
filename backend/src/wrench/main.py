@@ -64,6 +64,7 @@ def _exposed(api: Api) -> list[Callable[..., Any]]:
         api.check_for_updates,
         api.install_update,
         api.open_url,
+        api.pick_folder,
     ]
 
 
@@ -161,6 +162,7 @@ def _run() -> int:
         min_size=(800, 500),
     )
     assert window is not None
+    api._set_window(window)
     window.expose(*_exposed(api))
     updater.set_close_handler(window.destroy)
 

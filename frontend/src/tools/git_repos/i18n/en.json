@@ -1,0 +1,97 @@
+{
+  "name": "Git repositories",
+  "description": "The state of all your git repositories at a glance: fetch, pull, push and commit without a terminal.",
+  "toolbar": {
+    "search": "Search repositories…",
+    "all": "All",
+    "attention": "Needs attention",
+    "fetchAll": "Fetch all",
+    "refresh": "Refresh",
+    "folders": "Folders"
+  },
+  "badges": {
+    "ahead": "↑{n}",
+    "aheadTitle": "{n} commit(s) to push",
+    "behind": "↓{n}",
+    "behindTitle": "{n} commit(s) to pull",
+    "changes": "● {n}",
+    "changesTitle": "{n} modified or untracked file(s)",
+    "conflict": "⚠ conflict",
+    "operation": "{op} in progress",
+    "detached": "detached HEAD",
+    "noRemote": "no remote",
+    "unpublished": "unpublished branch",
+    "upToDate": "✓ Up to date",
+    "fetched": "Fetched {when}",
+    "host": {
+      "github": "GitHub",
+      "gitea": "Gitea",
+      "other": "Other host"
+    },
+    "clearError": "Clear the error"
+  },
+  "actions": {
+    "fetch": "Fetch",
+    "pull": "Pull",
+    "push": "Push",
+    "commit": "Commit…",
+    "running": {
+      "fetch": "Fetching…",
+      "pull": "Pulling…",
+      "push": "Pushing…",
+      "commit": "Committing…"
+    }
+  },
+  "commit": {
+    "title": "Commit {name}",
+    "summary": "No file will be committed | 1 file will be committed | {n} files will be committed",
+    "files": "Show the files",
+    "message": "Commit message",
+    "placeholder": "Describe your changes",
+    "cancel": "Cancel",
+    "commit": "Commit",
+    "commitAndPush": "Commit and push"
+  },
+  "folders": {
+    "title": "Root folders",
+    "hint": "The git repositories under these folders are discovered automatically.",
+    "add": "Add a folder",
+    "remove": "Remove",
+    "missing": "Folder not found",
+    "depth": "Search depth",
+    "none": "No folder yet.",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "empty": {
+    "noRoots": "Choose one or more folders that contain your git repositories.",
+    "addFolder": "Add a folder",
+    "noGit": "git was not found on this computer. Install it, for example with the following command, then restart Wrench:",
+    "noRepos": "No git repository was found in your folders.",
+    "openFolders": "Edit the folders",
+    "noMatch": "No repository matches.",
+    "loading": "Looking for repositories…"
+  },
+  "relative": {
+    "never": "never",
+    "now": "just now",
+    "minutes": "{n} min ago",
+    "hours": "{n} h ago",
+    "days": "{n} d ago"
+  },
+  "errors": {
+    "not_a_repo": "This folder is no longer a git repository.",
+    "diverged": "The local and remote branches have diverged: neither a fast-forward pull nor a push is possible.",
+    "nothing_to_commit": "There is nothing to commit.",
+    "empty_message": "The commit message is required.",
+    "detached_head": "HEAD is detached: switch to a branch first.",
+    "in_progress": "A git operation (merge, rebase…) is in progress, or conflicts are unresolved, in this repository.",
+    "no_remote": "This repository has no remote.",
+    "auth_required": "Authentication required: sign in to the remote with git once.",
+    "timeout": "The git operation took too long.",
+    "git_failed": "The git command failed.",
+    "unknown_repo": "Unknown repository: refresh the list.",
+    "git_not_found": "git was not found on this computer.",
+    "busy": "An operation is already running on this repository."
+  }
+}

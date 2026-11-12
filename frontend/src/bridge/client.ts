@@ -48,3 +48,6 @@ export const checkForUpdates = (): Promise<UpdateStatus> => unwrap(api().check_f
 export const installUpdate = (): Promise<UpdateStatus> => unwrap(api().install_update())
 
 export const openUrl = (url: string): Promise<null> => unwrap(api().open_url(url))
+
+export const pickFolder = (initial?: string): Promise<string | null> =>
+  unwrap(api().pick_folder(initial ?? null))

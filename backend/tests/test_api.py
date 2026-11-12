@@ -1,8 +1,10 @@
 import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
+import webview
 from conftest import FakeBackend
 from pydantic import BaseModel
 
@@ -206,3 +208,31 @@ def test_open_url_reports_browser_failure(api: Api, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(webbrowser, "open", lambda u: False)
     r = api.open_url("https://github.com/Ergorock/wrench/releases")
     assert r["error"]["code"] == "open_failed"
+
+
+class FakeWindow:
+    def __init__(self, result: Any) -> None:
+        self.result = result
+        self.calls: list[tuple[Any, str]] = []
+
+    def create_file_dialog(self, dialog_type: Any, directory: str = "") -> Any:
+        self.calls.append((dialog_type, directory))
+        return self.result
+
+
+def test_pick_folder_returns_path(api: Api) -> None:
+    w = FakeWindow((r"C:\Dev",))
+    api._set_window(w)
+    assert api.pick_folder(r"C:\Users") == {"ok": True, "data": r"C:\Dev"}
+    assert w.calls == [(webview.FileDialog.FOLDER, r"C:\Users")]
+
+
+def test_pick_folder_cancel(api: Api) -> None:
+    w = FakeWindow(None)
+    api._set_window(w)
+    assert api.pick_folder() == {"ok": True, "data": None}
+    assert w.calls[0][1] == ""
+
+
+def test_pick_folder_without_window(api: Api) -> None:
+    assert api.pick_folder()["error"]["code"] == "internal_error"

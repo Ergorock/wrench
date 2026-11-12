@@ -11,6 +11,7 @@ declare global {
         check_for_updates(): Promise<Envelope<unknown>>
         install_update(): Promise<Envelope<unknown>>
         open_url(url: string): Promise<Envelope<unknown>>
+        pick_folder(initial: string | null): Promise<Envelope<unknown>>
         tool_call(toolId: string, action: string, payload?: object | null): Promise<Envelope<unknown>>
       }
     }
