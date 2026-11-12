@@ -1,6 +1,6 @@
 # Wrench
 
-Wrench est une application de bureau Windows qui regroupe de petits outils du quotidien derrière une interface unique : un bandeau d'outils personnalisable (ordre, favoris), des paramètres (langue `fr`/`en`, thème clair, sombre ou système) et des notifications. Le Lot 1 livre le socle (le shell) sans outil réel ; les outils s'y branchent ensuite.
+Wrench est une application de bureau Windows qui regroupe de petits outils du quotidien derrière une interface unique : un bandeau d'outils personnalisable (ordre, favoris), des paramètres (langue `fr`/`en`, thème clair, sombre ou système) et des notifications. Le socle (le shell) est livré avec un premier outil, « Raccourcis Windows » ; d'autres outils s'y branchent en suivant le guide [Créer un outil](docs/creating-a-tool.md).
 
 ## Prérequis
 
