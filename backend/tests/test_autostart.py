@@ -1,21 +1,8 @@
 import pytest
+from conftest import FakeBackend
 
 from wrench.core.autostart import Autostart
 from wrench.sdk.errors import ToolError
-
-
-class FakeBackend:
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-
-    def get(self, name: str) -> str | None:
-        return self.values.get(name)
-
-    def set(self, name: str, value: str) -> None:
-        self.values[name] = value
-
-    def delete(self, name: str) -> None:
-        self.values.pop(name, None)
 
 
 def test_enable_writes_quoted_exe() -> None:
