@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+import webview
 from pydantic import ValidationError
 
 from wrench._version import __version__
@@ -29,7 +30,7 @@ def _fail(code: str, message: str) -> dict[str, Any]:
 
 
 class Api:
-    """Bridge to the front. Only the eight public methods are exposed to JS
+    """Bridge to the front. Only the nine public methods are exposed to JS
     (see `main._exposed`); everything else is private."""
 
     def __init__(
@@ -48,6 +49,7 @@ class Api:
         self._warnings = warnings
         self._updater = updater
         self._lock = threading.Lock()
+        self._window: Any = None
 
     def _current(self) -> Settings:
         with self._lock:
@@ -57,6 +59,10 @@ class Api:
         with self._lock:
             self._settings = self._settings.model_copy(update={"window": window})
             self._store.save(self._settings)
+
+    def _set_window(self, window: Any) -> None:
+        """The pywebview window, needed by the native dialogs."""
+        self._window = window
 
     def _envelope(self, fn: Callable[[], Any]) -> dict[str, Any]:
         try:
@@ -180,5 +186,20 @@ class Api:
             # webbrowser.open returns False when no browser could be launched: "open_failed".
             if not webbrowser.open(url):
                 raise ToolError("open_failed", "Could not open the browser")
+
+        return self._envelope(run)
+
+    def pick_folder(self, initial: str | None = None) -> dict[str, Any]:
+        """Native folder picker; `data` is the chosen path, or None when cancelled."""
+
+        def run() -> str | None:
+            if self._window is None:
+                raise RuntimeError("No window to attach the folder dialog to")
+            result = self._window.create_file_dialog(
+                webview.FileDialog.FOLDER, directory=initial or ""
+            )
+            if not result:
+                return None
+            return str(result if isinstance(result, str) else result[0])
 
         return self._envelope(run)

@@ -6,6 +6,7 @@ import {
   getUpdateStatus,
   installUpdate,
   openUrl,
+  pickFolder,
   saveSettings,
   setAutostart,
   toolCall,
@@ -97,5 +98,17 @@ describe('bridge client, mises à jour', () => {
     expect(await installUpdate()).toEqual({ status: 'downloading' })
     await openUrl('https://github.com/Ergorock/wrench/releases')
     expect(seen[0]).toEqual(['https://github.com/Ergorock/wrench/releases'])
+  })
+})
+
+describe('bridge client, pickFolder', () => {
+  it('renvoie le chemin choisi ou null, et transmet le dossier initial', async () => {
+    const seen: unknown[][] = []
+    let answer: string | null = 'C:\Dev'
+    mockApi({ pick_folder: async (...a) => (seen.push(a), { ok: true, data: answer }) })
+    expect(await pickFolder('C:\Users')).toBe('C:\Dev')
+    answer = null
+    expect(await pickFolder()).toBeNull()
+    expect(seen).toEqual([['C:\Users'], [null]])
   })
 })

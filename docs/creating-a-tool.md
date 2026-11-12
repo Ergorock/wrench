@@ -137,6 +137,20 @@ def _load_groups() -> tuple[ShortcutGroup, ...]:
     return tuple(ShortcutGroup.model_validate(g) for g in raw["groups"])
 ```
 
+### Bibliothèques partagées (`wrench.shared`)
+
+Le paquet `backend/src/wrench/shared/` regroupe des bibliothèques que plusieurs outils peuvent importer. Elles ne dépendent ni d'un outil, ni de l'interface, ni des réglages : elles n'importent rien de `wrench.tools`, `wrench.api`, `wrench.core.settings` ni `wrench.main`.
+
+- **`wrench.shared.git`** appelle le `git` installé (`subprocess`, sans console ni question dans le terminal) :
+  - `runner` : `find_git()` (lève `GitNotFound`), `run_git(repo, args, timeout)` et les délais `STATUS_TIMEOUT`, `NETWORK_TIMEOUT`, `COMMIT_TIMEOUT` ;
+  - `status` : `read_status(repo) -> RepoStatus` (branche, avance et retard, fichiers modifiés, opération en cours, distant) ;
+  - `remote` : `host_kind(url)` et `web_url(url)` ;
+  - `discovery` : `find_repos(roots, max_depth)` ;
+  - `ops` : `fetch`, `pull` (avance rapide uniquement), `push` (jamais forcé) et `commit_all`, qui lèvent `GitOpError(code, message)` ;
+  - `jobs` : `RepoJobs`, pour lancer ces opérations en arrière-plan (au plus une par dépôt).
+
+  Les appels d'un même outil étant séquentiels, une opération longue (réseau) doit tourner en arrière-plan : l'action la soumet à `RepoJobs` et rend la main, et le frontend interroge l'état tant qu'une opération tourne. Voir l'outil `git_repos`.
+
 ## 4. Frontend
 
 ### `index.ts`
@@ -184,6 +198,17 @@ try {
 Pour une mise à jour optimiste, ne mémorisez pas « l'état précédent » pour y revenir en cas d'échec : deux clics rapprochés se marcheraient dessus. `ShortcutsTool.vue` garde plutôt l'état confirmé par le backend (`confirmed`) et la liste des opérations en attente (`pendingToggles`) ; l'état affiché (`favorites`) est calculé en appliquant les opérations en attente à l'état confirmé, et les appels sont envoyés l'un après l'autre.
 
 `pushToast(message, 'info')` reste utile pour un message d'information qui ne vient pas d'une erreur d'action.
+
+### Choisir un dossier
+
+`pickFolder(initial?)`, exporté par `frontend/src/bridge/client.ts`, ouvre le sélecteur de dossier natif de Windows. Il renvoie le chemin choisi, ou `null` si l'utilisateur annule :
+
+```ts
+import { pickFolder } from '../../bridge/client'
+
+const folder = await pickFolder(currentFolder)
+if (folder !== null) roots.value.push(folder)
+```
 
 ### Textes : tout passe par l'i18n
 
