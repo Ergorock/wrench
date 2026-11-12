@@ -73,6 +73,20 @@ Wrench vérifie les nouvelles versions publiées sur GitHub (au démarrage puis 
 - Les installateurs téléchargés restent dans `%TEMP%\Wrench-update\` : ils peuvent être supprimés sans risque.
 - Certains antivirus ou protections d'entreprise bloquent les installateurs non signés.
 
+## Publier une version
+
+Les releases sont produites par GitHub Actions (`.github/workflows/release.yml`) à chaque tag `vX.Y.Z` :
+
+1. Mettre la même version dans `backend/src/wrench/_version.py` (`__version__`) et dans `backend/pyproject.toml` (`version`). Un test échoue si les deux diffèrent.
+2. Commiter, puis créer et pousser le tag :
+
+   ```bash
+   git tag vX.Y.Z
+   git push origin main vX.Y.Z
+   ```
+
+Le pipeline vérifie que le tag correspond à `__version__`, relance les tests, construit l'application et l'installateur, puis publie `Wrench-Setup-X.Y.Z.exe` dans une release GitHub. Un tag avec suffixe (`v1.2.0-beta.1`) est publié comme pré-release : les mises à jour automatiques l'ignorent.
+
 ## Documentation
 
 - [Créer un outil](docs/creating-a-tool.md)

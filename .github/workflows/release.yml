@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Check tag matches __version__
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".Substring(1)
+          $match = Select-String -Path backend/src/wrench/_version.py -Pattern '__version__ = "(.+)"'
+          $version = $match.Matches[0].Groups[1].Value
+          if ($tag -ne $version) {
+            Write-Error "Tag v$tag does not match __version__ $version (backend/src/wrench/_version.py)."
+            exit 1
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$($version.Contains('-').ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
+      - name: Backend checks
+        working-directory: backend
+        run: |
+          uv sync
+          uv run pytest
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run mypy src
+
+      - name: Frontend checks
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run lint
+
+      - name: Build application
+        shell: pwsh
+        run: ./scripts/build.ps1
+
+      - name: Sign executable
+        if: ${{ vars.SIGNING_ENABLED == 'true' }}
+        run: echo "Signing is not configured yet."
+
+      - name: Ensure NSIS
+        shell: pwsh
+        run: |
+          $found = Get-Command makensis -ErrorAction SilentlyContinue
+          if (-not $found -and -not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe") -and -not (Test-Path "$env:ProgramFiles\NSIS\makensis.exe")) {
+            choco install nsis -y --no-progress
+          }
+          $exe = (Get-Command makensis -ErrorAction SilentlyContinue).Source
+          if (-not $exe) { $exe = "${env:ProgramFiles(x86)}\NSIS\makensis.exe" }
+          & $exe /VERSION
+
+      - name: Build installer
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -SkipAppBuild
+
+      - name: Sign installer
+        if: ${{ vars.SIGNING_ENABLED == 'true' }}
+        run: echo "Signing is not configured yet."
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $ghArgs = @("${{ github.ref_name }}", "installer/Output/Wrench-Setup-$v.exe", "--title", "Wrench $v", "--generate-notes")
+          if ("${{ steps.version.outputs.prerelease }}" -eq "true") { $ghArgs += "--prerelease" }
+          gh release create @ghArgs
