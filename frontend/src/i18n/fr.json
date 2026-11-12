@@ -17,7 +17,7 @@
   },
   "home": {
     "title": "Bienvenue dans Wrench",
-    "body": "Votre boîte à outils pour Windows. Aucun outil n’est encore installé : ils apparaîtront ici et dans le menu de gauche dès qu’ils seront disponibles.",
+    "body": "Votre boîte à outils pour Windows. Choisissez un outil dans le menu de gauche. Si aucun n’est actif, activez-en dans les paramètres.",
     "openSettings": "Ouvrir les paramètres"
   },
   "settings": {

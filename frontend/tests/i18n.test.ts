@@ -23,6 +23,13 @@ describe('i18n', () => {
     }
   })
 
+  it('le texte d’accueil ne dit pas « aucun outil installé » et invite à activer des outils', () => {
+    expect(fr.home.body).not.toMatch(/install/i)
+    expect(en.home.body).not.toMatch(/install/i)
+    expect(fr.home.body).toMatch(/activ/i)
+    expect(en.home.body).toMatch(/enable/i)
+  })
+
   it('setLanguage change la locale et <html lang>', () => {
     setLanguage('fr')
     expect(i18n.global.locale.value).toBe('fr')

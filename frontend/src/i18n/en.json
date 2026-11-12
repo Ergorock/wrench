@@ -17,7 +17,7 @@
   },
   "home": {
     "title": "Welcome to Wrench",
-    "body": "Your toolbox for Windows. No tools are installed yet: they will show up here and in the left menu as soon as they are available.",
+    "body": "Your toolbox for Windows. Pick a tool from the left menu. If none is active, enable some in the settings.",
     "openSettings": "Open settings"
   },
   "settings": {
