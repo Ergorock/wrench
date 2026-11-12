@@ -244,6 +244,21 @@ def test_launch_installer_detached_args(monkeypatch):
     assert kwargs["close_fds"] is True
 
 
+def test_launch_installer_resets_pyinstaller_environment(monkeypatch):
+    # The installer relaunches Wrench (/RELAUNCH): that new Wrench must not inherit this
+    # instance's PyInstaller bootloader state, or it may act as our sub-process.
+    calls: list[tuple[Any, dict[str, Any]]] = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: calls.append((a, k)))
+    monkeypatch.setenv("_PYI_APPLICATION_HOME_DIR", r"C:\old\_internal")
+    monkeypatch.setenv("_PYI_PARENT_PROCESS_LEVEL", "1")
+    monkeypatch.setenv("WRENCH_KEEP_ME", "yes")
+    launch_installer_detached(Path("C:/t/Wrench-Setup-1.3.0.exe"))
+    env = calls[0][1]["env"]
+    assert env["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
+    assert not any(k.upper().startswith("_PYI_") for k in env)
+    assert env["WRENCH_KEEP_ME"] == "yes"
+
+
 def test_inflight_check_does_not_defeat_double_start(tmp_path):
     u, http = make(tmp_path, b"x", slow=True)
     u.check()

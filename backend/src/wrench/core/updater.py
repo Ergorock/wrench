@@ -251,11 +251,19 @@ def verify_file(path: Path, size: int, sha256: str) -> None:
 
 
 def launch_installer_detached(path: Path) -> None:
-    """Start the installer fully detached so it survives Wrench closing."""
+    """Start the installer fully detached so it survives Wrench closing.
+
+    The installer relaunches Wrench (/RELAUNCH) and passes its environment on, so the
+    PyInstaller bootloader state of this instance (_PYI_*) is dropped and
+    PYINSTALLER_RESET_ENVIRONMENT is set: the new Wrench starts as an independent app.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.upper().startswith("_PYI_")}
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     subprocess.Popen(
         [str(path), *INSTALLER_ARGS],
         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
         close_fds=True,
+        env=env,
     )
 
 
