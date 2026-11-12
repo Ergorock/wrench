@@ -2,7 +2,7 @@ param([switch]$SkipAppBuild)
 
 $ErrorActionPreference = "Stop"
 
-# Builds installer/Output/Wrench-Setup-<version>.exe (Inno Setup 6).
+# Builds installer/Output/Wrench-Setup-<version>.exe (NSIS 3).
 $root = Split-Path -Parent $PSScriptRoot
 
 # 1. Application (dist/Wrench), unless an existing build is reused
@@ -20,34 +20,56 @@ if (-not $match) {
     throw "No __version__ found in $versionFile."
 }
 $version = $match.Matches[0].Groups[1].Value
+# VIProductVersion needs X.Y.Z.0: drop any -suffix (e.g. -beta.1).
+$numeric = ($version -replace '-.*$', '') + ".0"
 
-# 3. iscc
-$iscc = $null
-$onPath = Get-Command iscc -ErrorAction SilentlyContinue
+# 3. makensis: PATH, NSIS install folders, then the electron-builder cache
+#    (newest nsis-* folder, Bin\makensis.exe preferred).
+$makensis = $null
+$onPath = Get-Command makensis -ErrorAction SilentlyContinue
 if ($onPath) {
-    $iscc = $onPath.Source
+    $makensis = $onPath.Source
 }
 else {
     $candidates = @(
-        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+        "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+        "$env:ProgramFiles\NSIS\makensis.exe"
     )
     foreach ($candidate in $candidates) {
         if (Test-Path $candidate) {
-            $iscc = $candidate
+            $makensis = $candidate
             break
         }
     }
 }
-if (-not $iscc) {
-    throw "Inno Setup 6 not found. Install it from https://jrsoftware.org/isdl.php"
+$cache = "$env:LOCALAPPDATA\electron-builder\Cache"
+if (-not $makensis -and (Test-Path $cache)) {
+    $nsisDir = '^.*\\nsis-(\d+(\.\d+)+)\\.*$'
+    $found = Get-ChildItem $cache -Recurse -Filter makensis.exe |
+        Where-Object { $_.FullName -match $nsisDir } |
+        Sort-Object @{ Expression = { [version]($_.FullName -replace $nsisDir, '$1') }; Descending = $true },
+                    @{ Expression = { $_.Directory.Name -eq "Bin" }; Descending = $true } |
+        Select-Object -First 1
+    if ($found) {
+        $makensis = $found.FullName
+    }
+}
+if (-not $makensis) {
+    throw @"
+makensis (NSIS 3) not found. Searched:
+  - PATH
+  - ${env:ProgramFiles(x86)}\NSIS\makensis.exe
+  - $env:ProgramFiles\NSIS\makensis.exe
+  - $cache\nsis-*\...\makensis.exe
+Install it with: winget install NSIS.NSIS
+"@
 }
 
 # 4. Compile. Native tools write to stderr: judge them by exit code only.
 $ErrorActionPreference = "Continue"
-& $iscc "/DAppVersion=$version" (Join-Path $root "installer/wrench.iss")
+& $makensis "/DAPP_VERSION=$version" "/DAPP_VERSION_NUMERIC=$numeric" (Join-Path $root "installer/wrench.nsi")
 if ($LASTEXITCODE -ne 0) {
-    throw "iscc failed with exit code $LASTEXITCODE."
+    throw "makensis failed with exit code $LASTEXITCODE."
 }
 $ErrorActionPreference = "Stop"
 
