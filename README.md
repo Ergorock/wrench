@@ -51,6 +51,18 @@ Le script compile le front (`npm ci`, `npm run build`), synchronise le backend (
 
 L'icône `backend/assets/wrench.ico` est provisoire. Elle se régénère avec `uv run --project backend python scripts/make_icon.py`.
 
+## Installateur
+
+Prérequis : [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`).
+
+```powershell
+scripts/build-installer.ps1 [-SkipAppBuild]
+```
+
+Le script lance `scripts/build.ps1` (sauf avec `-SkipAppBuild`, qui réutilise `dist/Wrench/`), lit la version dans `backend/src/wrench/_version.py`, puis compile `installer/wrench.iss`. Résultat : `installer/Output/Wrench-Setup-<version>.exe`, qui s'installe pour l'utilisateur courant, sans droits administrateur.
+
+L'installateur n'est pas signé : Windows SmartScreen affichera un avertissement au premier lancement (« Informations complémentaires », puis « Exécuter quand même »).
+
 ## Documentation
 
 - [Spécification du shell](docs/superpowers/specs/2026-11-12-wrench-shell-design.md)
