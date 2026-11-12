@@ -30,9 +30,7 @@ class WinregBackend:
 
     def delete(self, name: str) -> None:
         try:
-            with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE
-            ) as key:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
                 winreg.DeleteValue(key, name)
         except FileNotFoundError:
             pass

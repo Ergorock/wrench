@@ -1,4 +1,4 @@
-# Lance Wrench en mode dev : serveur Vite en arrière-plan + fenêtre pywebview.
+﻿# Lance Wrench en mode dev : serveur Vite en arrière-plan + fenêtre pywebview.
 # Compatible Windows PowerShell 5.1 et PowerShell 7, depuis n'importe quel dossier.
 $ErrorActionPreference = 'Stop'
 
