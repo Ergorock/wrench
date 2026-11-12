@@ -6,9 +6,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from wrench.shared.git.errors import GitOpError
+from wrench.shared.git.errors import GitOpError, run_or_raise
 from wrench.shared.git.remote import HostKind, host_kind
-from wrench.shared.git.runner import STATUS_TIMEOUT, GitTimeout, run_git
+from wrench.shared.git.runner import STATUS_TIMEOUT
 
 MAX_CHANGED_FILES = 200
 
@@ -91,14 +91,7 @@ def parse_porcelain_v2(output: str) -> dict[str, Any]:
 
 
 def _git(repo: Path, *args: str) -> str:
-    try:
-        result = run_git(repo, args, STATUS_TIMEOUT)
-    except GitTimeout as exc:
-        raise GitOpError("timeout", str(exc)) from exc
-    if result.code != 0:
-        code = "not_a_repo" if "not a git repository" in result.stderr else "git_failed"
-        raise GitOpError(code, result.stderr.strip()[-500:])
-    return result.stdout
+    return run_or_raise(repo, args, STATUS_TIMEOUT)
 
 
 def _remote_url(repo: Path) -> str | None:
