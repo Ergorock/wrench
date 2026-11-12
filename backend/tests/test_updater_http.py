@@ -1,4 +1,5 @@
 import hashlib
+import http.client
 import io
 import urllib.error
 import urllib.request
@@ -24,6 +25,10 @@ from wrench.core.updater import (
         "https://evil.example/x",
         "https://github.com.evil.example/x",
         "https://github.com@evil.example/x",
+        r"https://evil.example\@github.com/x",
+        "https://u:p@github.com/x",
+        "https://github.com:8443/x",
+        "https://github.com:bad/x",
         "file:///C:/x",
     ],
 )
@@ -38,11 +43,31 @@ def test_check_url_accepts() -> None:
     check_url("https://GitHub.com/Ergorock/wrench")
 
 
-def test_redirect_to_foreign_host_is_refused() -> None:
+@pytest.mark.parametrize("code", [301, 302, 303, 307, 308])
+@pytest.mark.parametrize(
+    "newurl", ["https://evil.example/x.exe", "http://github.com/Ergorock/wrench/x.exe"]
+)
+def test_redirect_to_disallowed_url_is_refused(code: int, newurl: str) -> None:
     handler = SafeRedirectHandler()
     req = urllib.request.Request("https://github.com/Ergorock/wrench/releases/download/v1/x.exe")
-    with pytest.raises(UpdateError):
-        handler.redirect_request(req, None, 302, "Found", {}, "https://evil.example/x.exe")  # type: ignore[arg-type]
+    with pytest.raises(UpdateError) as e:
+        handler.redirect_request(req, None, code, "Found", {}, newurl)  # type: ignore[arg-type]
+    assert e.value.code == "update_integrity"
+
+
+def test_redirect_to_allowed_host_is_accepted() -> None:
+    handler = SafeRedirectHandler()
+    req = urllib.request.Request("https://github.com/Ergorock/wrench/releases/download/v1/x.exe")
+    new = handler.redirect_request(
+        req,
+        None,  # type: ignore[arg-type]
+        302,
+        "Found",
+        {},  # type: ignore[arg-type]
+        "https://release-assets.githubusercontent.com/a",
+    )
+    assert new is not None
+    assert new.full_url == "https://release-assets.githubusercontent.com/a"
 
 
 def test_verify_file(tmp_path: Path) -> None:
@@ -116,6 +141,8 @@ def test_get_json_invalid_json_is_network_error() -> None:
         urllib.error.HTTPError("https://api.github.com/x", 403, "Forbidden", {}, None),  # type: ignore[arg-type]
         urllib.error.URLError("down"),
         TimeoutError(),
+        http.client.IncompleteRead(b"ab"),
+        http.client.BadStatusLine("x"),
     ],
 )
 def test_network_errors_map_to_update_network(exc: BaseException) -> None:
@@ -190,3 +217,39 @@ def test_download_checks_start_url(tmp_path: Path) -> None:
             "http://github.com/x", tmp_path / "x", lambda r, t: None
         )
     assert e.value.code == "update_integrity"
+
+
+def test_download_http_exception_maps_to_network_and_removes_file(tmp_path: Path) -> None:
+    class _Broken(_Resp):
+        def read(self, n: int = -1) -> bytes:
+            if self.tell() == 0:
+                return super().read(4)
+            raise http.client.IncompleteRead(b"abcd")
+
+    dest = tmp_path / "b.exe"
+    with pytest.raises(UpdateError) as e:
+        UrllibClient(opener=_Opener(_Broken(b"abcdefgh"))).download(
+            "https://github.com/a/b.exe", dest, lambda r, t: None
+        )
+    assert e.value.code == "update_network"
+    assert not dest.exists()
+
+
+def test_verify_file_read_error_removes_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    p = tmp_path / "f"
+    p.write_bytes(b"abc")
+    real_open = Path.open
+
+    def boom(self: Path, *a: Any, **k: Any) -> Any:
+        if self == p:
+            raise PermissionError("locked")
+        return real_open(self, *a, **k)
+
+    monkeypatch.setattr(Path, "open", boom)
+    with pytest.raises(UpdateError) as e:
+        verify_file(p, 3, "00" * 32)
+    assert e.value.code == "update_integrity"
+    monkeypatch.undo()
+    assert not p.exists()

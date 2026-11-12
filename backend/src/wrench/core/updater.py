@@ -1,4 +1,5 @@
 import hashlib
+import http.client
 import json
 import logging
 import os
@@ -133,10 +134,23 @@ def read_install_location() -> str | None:
 
 
 def check_url(url: str) -> None:
-    """Refuse anything but https on an allowed host (userinfo tricks resolve to the real host)."""
+    """Accept only plain https://<allowed host>[:443]/... URLs.
+
+    Userinfo ("@" in the netloc) and non-443 ports are refused: urllib does not strip userinfo,
+    so what is validated here could otherwise differ from the host urllib connects to.
+    """
     parsed = urllib.parse.urlsplit(url)
     host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" or host not in ALLOWED_HOSTS:
+    try:
+        port = parsed.port
+    except ValueError:
+        port = -1
+    if (
+        parsed.scheme != "https"
+        or host not in ALLOWED_HOSTS
+        or "@" in parsed.netloc
+        or port not in (None, 443)
+    ):
         raise UpdateError("update_integrity", f"URL not allowed: {url}")
 
 
@@ -182,7 +196,11 @@ class UrllibClient:
                 return json.loads(resp.read())
         except UpdateError:
             raise  # integrity refusal from check_url / redirect handler
-        except (OSError, ValueError) as e:  # URLError, HTTPError, TimeoutError are OSError
+        except (
+            OSError,
+            ValueError,
+            http.client.HTTPException,
+        ) as e:  # URLError, HTTPError, TimeoutError are OSError
             raise UpdateError("update_network", str(e)) from e
 
     def download(self, url: str, dest: Path, on_progress: Callable[[int, int], None]) -> None:
@@ -199,7 +217,7 @@ class UrllibClient:
             dest.unlink(missing_ok=True)
             if isinstance(e, UpdateError):
                 raise
-            if isinstance(e, (OSError, ValueError)):
+            if isinstance(e, (OSError, ValueError, http.client.HTTPException)):
                 raise UpdateError("update_network", str(e)) from e
             raise
 
@@ -215,6 +233,7 @@ def verify_file(path: Path, size: int, sha256: str) -> None:
                     digest.update(chunk)
             ok = digest.hexdigest() == sha256.lower()
     except OSError as e:
+        path.unlink(missing_ok=True)
         raise UpdateError("update_integrity", f"Cannot read downloaded file: {e}") from e
     if not ok:
         path.unlink(missing_ok=True)
