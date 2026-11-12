@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import threading
 import time
 
@@ -76,3 +78,18 @@ def test_max_parallel() -> None:
     go.set()
     jobs.wait_idle(5)
     assert peak[0] == 4
+
+
+def test_pending_and_running_jobs_do_not_keep_the_process_alive() -> None:
+    """Closing Wrench must not wait for queued fetches: the process would keep the
+    single-instance mutex while invisible."""
+    script = (
+        "import threading\n"
+        "from wrench.shared.git.jobs import RepoJobs\n"
+        "jobs = RepoJobs(max_workers=1)\n"
+        "for i in range(3):\n"
+        "    jobs.submit(f'r{i}', 'fetch', lambda: threading.Event().wait(60))\n"
+    )
+    t0 = time.monotonic()
+    subprocess.run([sys.executable, "-c", script], check=True, timeout=60)
+    assert time.monotonic() - t0 < 15

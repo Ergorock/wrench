@@ -84,7 +84,7 @@
     "nothing_to_commit": "Il n’y a rien à commiter.",
     "empty_message": "Le message du commit est obligatoire.",
     "detached_head": "La tête est détachée : passez sur une branche d’abord.",
-    "in_progress": "Une opération git (merge, rebase…) est en cours dans ce dépôt.",
+    "in_progress": "Une opération git (merge, rebase…) est en cours ou des conflits ne sont pas résolus dans ce dépôt.",
     "no_remote": "Ce dépôt n’a pas de distant.",
     "auth_required": "Authentification requise : connectez-vous au distant avec git une première fois.",
     "timeout": "L’opération git a pris trop de temps.",

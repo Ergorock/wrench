@@ -11,6 +11,7 @@ from pathlib import Path
 STATUS_TIMEOUT = 10
 NETWORK_TIMEOUT = 120
 COMMIT_TIMEOUT = 60
+KILL_GRACE = 5
 
 
 class GitNotFound(Exception):
@@ -67,18 +68,36 @@ def run_git(repo: Path, args: Sequence[str], timeout: float, git: str | None = N
         "GIT_OPTIONAL_LOCKS": "0",
     }
     cmd = [git or find_git(), "-C", str(repo), *args]
-    try:
-        # On timeout, subprocess.run kills the process before raising.
-        done = subprocess.run(
-            cmd,
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    with subprocess.Popen(
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        encoding="utf-8",
+        errors="replace",
+        creationflags=flags,
+    ) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            _kill_tree(process, flags)
+            raise GitTimeout(f"git {' '.join(args)} timed out after {timeout}s") from exc
+    return GitResult(process.returncode, stdout or "", stderr or "")
+
+
+def _kill_tree(process: subprocess.Popen[str], flags: int) -> None:
+    """Kills git and its children (git-remote-https, credential helper, ssh), which would
+    otherwise keep our pipes open, then drains the pipes for a bounded time."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
             capture_output=True,
-            stdin=subprocess.DEVNULL,
-            timeout=timeout,
-            env=env,
-            encoding="utf-8",
-            errors="replace",
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            creationflags=flags,
         )
-    except subprocess.TimeoutExpired as exc:
-        raise GitTimeout(f"git {' '.join(args)} timed out after {timeout}s") from exc
-    return GitResult(done.returncode, done.stdout or "", done.stderr or "")
+    process.kill()
+    try:
+        process.communicate(timeout=KILL_GRACE)
+    except subprocess.TimeoutExpired:
+        pass  # a survivor still holds a pipe: closing them in __exit__ releases us.

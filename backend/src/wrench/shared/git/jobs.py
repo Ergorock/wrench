@@ -3,7 +3,6 @@
 import logging
 import threading
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -24,7 +23,10 @@ _IDLE = JobState(None, None, None)
 
 class RepoJobs:
     def __init__(self, max_workers: int = 4) -> None:
-        self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="git-job")
+        # Daemon threads, not a ThreadPoolExecutor: its workers are joined at interpreter exit,
+        # so closing Wrench would wait for every queued fetch while holding the
+        # single-instance mutex. A git process still running at exit simply finishes alone.
+        self._slots = threading.BoundedSemaphore(max_workers)
         self._states: dict[str, JobState] = {}
         self._cond = threading.Condition()
 
@@ -36,13 +38,14 @@ class RepoJobs:
             if current.running is not None:
                 return False
             self._states[repo] = JobState(op, current.error, current.finished_at)
-        self._pool.submit(self._run, repo, fn)
+        threading.Thread(target=self._run, args=(repo, fn), name=f"git-{op}", daemon=True).start()
         return True
 
     def _run(self, repo: str, fn: Callable[[], None]) -> None:
         error: dict[str, str] | None = None
         try:
-            fn()
+            with self._slots:
+                fn()
         except GitOpError as exc:
             error = {"code": exc.code, "message": exc.message}
         except Exception as exc:

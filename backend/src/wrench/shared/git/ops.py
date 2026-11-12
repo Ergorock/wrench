@@ -52,6 +52,10 @@ def commit_all(repo: Path, message: str) -> None:
         raise GitOpError("empty_message", "The commit message is empty")
     status = read_status(repo)
     _require_branch(status)
+    if status.conflicts > 0:
+        # Conflicts without an operation marker (`stash pop`, `checkout -m`): `add -A` would
+        # mark them resolved and commit the conflict markers.
+        raise GitOpError("in_progress", "Unresolved conflicts")
     if status.staged + status.unstaged + status.untracked + status.conflicts == 0:
         raise GitOpError("nothing_to_commit", "Nothing to commit")
     run_or_raise(repo, ["add", "-A"], COMMIT_TIMEOUT)

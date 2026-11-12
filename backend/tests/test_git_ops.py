@@ -149,3 +149,19 @@ def test_missing_repo_is_not_a_repo(tmp_path: Path) -> None:
 )
 def test_classify_error(stderr: str, code: str) -> None:
     assert classify_error(stderr) == code
+
+
+def test_commit_refuses_conflicts_without_operation(tmp_path: Path) -> None:
+    """`stash pop` leaves conflicts but no MERGE_HEAD: `add -A` would commit the markers."""
+    r = make_clone(make_remote(tmp_path), tmp_path / "c")
+    (r / "README.md").write_text("stashed", "utf-8")
+    git(r, "stash")
+    commit_file(r, "README.md", "committed", "c")
+    with pytest.raises(AssertionError):
+        git(r, "stash", "pop")
+    s = read_status(r)
+    assert s.conflicts == 1 and s.operation is None
+    with pytest.raises(GitOpError) as e:
+        commit_all(r, "m")
+    assert e.value.code == "in_progress"
+    assert "<<<<<<<" not in git(r, "show", "HEAD:README.md")

@@ -1,10 +1,14 @@
+import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from wrench.shared.git.runner import GitNotFound, GitTimeout, find_git, run_git
+
+windows_only = pytest.mark.skipif(os.name != "nt", reason="the fake git is a .cmd script")
 
 
 def test_find_git_not_found() -> None:
@@ -18,28 +22,49 @@ def test_find_git_returns_first_existing(tmp_path: Path) -> None:
     assert find_git(candidates=[r"C:\nope\git.exe", str(exe)]) == str(exe)
 
 
+def _fake_git(tmp_path: Path, *lines: str) -> str:
+    script = tmp_path / "fake git.cmd"
+    script.write_text("\r\n".join(["@echo off", *lines, ""]), "utf-8")
+    return str(script)
+
+
+@windows_only
 def test_run_git_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, Any] = {}
+    real_popen = subprocess.Popen
 
-    def fake_run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+    def spy(cmd: list[str], **kw: Any) -> Any:
         seen["cmd"] = cmd
         seen.update(kw)
-        return subprocess.CompletedProcess(cmd, 0, "out", "err")
+        return real_popen(cmd, **kw)
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
-    result = run_git(tmp_path, ["status"], 5, git="git")
-    assert seen["cmd"] == ["git", "-C", str(tmp_path), "status"]
-    assert seen["env"]["GIT_TERMINAL_PROMPT"] == "0" and seen["env"]["LC_ALL"] == "C"
-    assert seen["env"]["LANG"] == "C"
-    assert seen["env"]["GIT_OPTIONAL_LOCKS"] == "0" and seen["timeout"] == 5
+    monkeypatch.setattr(subprocess, "Popen", spy)
+    git = _fake_git(
+        tmp_path,
+        "echo %GIT_TERMINAL_PROMPT% %LC_ALL% %LANG% %GIT_OPTIONAL_LOCKS% %*",
+        "echo oops 1>&2",
+    )
+    result = run_git(tmp_path, ["status"], 5, git=git)
+    assert seen["cmd"] == [git, "-C", str(tmp_path), "status"]
     assert seen["creationflags"] == getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    assert (result.code, result.stdout, result.stderr) == (0, "out", "err")
+    assert result.code == 0
+    assert result.stdout.split() == ["0", "C", "C", "0", "-C", str(tmp_path), "status"]
+    assert result.stderr.strip() == "oops"
 
 
-def test_run_git_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    def slow(cmd: list[str], **kw: Any) -> None:
-        raise subprocess.TimeoutExpired(cmd, kw["timeout"])
-
-    monkeypatch.setattr(subprocess, "run", slow)
+@windows_only
+def test_run_git_timeout(tmp_path: Path) -> None:
+    git = _fake_git(tmp_path, "ping -n 30 127.0.0.1 > nul 2>&1")
     with pytest.raises(GitTimeout):
-        run_git(tmp_path, ["fetch"], 1, git="git")
+        run_git(tmp_path, ["fetch"], 1, git=git)
+
+
+@windows_only
+def test_run_git_timeout_kills_grandchildren_holding_the_pipes(tmp_path: Path) -> None:
+    """git-remote-https or a credential helper keeps our pipes open after git.exe dies:
+    the timeout must still return promptly."""
+    git = _fake_git(tmp_path, "ping -n 30 127.0.0.1")
+    t0 = time.monotonic()
+    with pytest.raises(GitTimeout):
+        run_git(tmp_path, ["fetch"], 1, git=git)
+    assert time.monotonic() - t0 < 10

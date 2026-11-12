@@ -84,7 +84,7 @@
     "nothing_to_commit": "There is nothing to commit.",
     "empty_message": "The commit message is required.",
     "detached_head": "HEAD is detached: switch to a branch first.",
-    "in_progress": "A git operation (merge, rebase…) is in progress in this repository.",
+    "in_progress": "A git operation (merge, rebase…) is in progress, or conflicts are unresolved, in this repository.",
     "no_remote": "This repository has no remote.",
     "auth_required": "Authentication required: sign in to the remote with git once.",
     "timeout": "The git operation took too long.",
