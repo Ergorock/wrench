@@ -1,11 +1,14 @@
 from pathlib import Path
 
+import pytest
 from conftest import FakeBackend
+from pydantic import BaseModel
 
 from wrench.api import Api
 from wrench.core.autostart import Autostart
-from wrench.core.registry import ToolRegistry
+from wrench.core.registry import LoadedTool, ToolRegistry
 from wrench.core.settings import SettingsStore, WindowSettings
+from wrench.sdk import ToolContext, ToolManifest, ToolService, action
 
 
 def test_bootstrap_shape(api: Api) -> None:
@@ -55,3 +58,69 @@ def test_tool_call_envelope(api: Api) -> None:
 
 def test_autostart_unavailable_envelope(api: Api) -> None:
     assert api.set_autostart(True)["error"]["code"] == "autostart_unavailable"
+
+
+class _Strict(BaseModel):
+    n: int
+
+
+class _Buggy(ToolService):
+    @action
+    def body_error(self) -> int:
+        return _Strict.model_validate({"n": "x"}).n
+
+    @action
+    def bad_return(self) -> int:
+        return "x"  # type: ignore[return-value]
+
+    @action
+    def takes_int(self, n: int) -> int:
+        return n
+
+
+class _BrokenInit(ToolService):
+    def __init__(self, ctx: ToolContext) -> None:
+        super().__init__(ctx)
+        _Strict.model_validate({"n": "x"})
+
+
+def _manifest(tool_id: str) -> ToolManifest:
+    return ToolManifest(id=tool_id, category="system", icon="x", version="1.0.0")
+
+
+@pytest.fixture
+def buggy_api(tmp_path: Path) -> Api:
+    registry = ToolRegistry(
+        [LoadedTool(_manifest("buggy"), _Buggy), LoadedTool(_manifest("broken"), _BrokenInit)],
+        tmp_path / "tools",
+        lambda: "en",
+    )
+    store = SettingsStore(tmp_path / "s.json", "en")
+    return Api(
+        store,
+        store.load().settings,
+        registry,
+        Autostart(FakeBackend(), "python.exe", frozen=False),
+        [],
+    )
+
+
+@pytest.mark.parametrize(
+    ("tool_id", "action_name"),
+    [("buggy", "body_error"), ("buggy", "bad_return"), ("broken", "anything")],
+)
+def test_tool_bugs_are_logged_internal_errors(
+    buggy_api: Api, caplog: pytest.LogCaptureFixture, tool_id: str, action_name: str
+) -> None:
+    r = buggy_api.tool_call(tool_id, action_name, {})
+    assert r["error"]["code"] == "internal_error"
+    assert any(rec.levelname == "ERROR" and rec.exc_info for rec in caplog.records)
+
+
+@pytest.mark.parametrize("payload", [{"n": "x"}, {}, {"n": 1, "extra": 2}, [1]])
+def test_bad_arguments_are_invalid_payload_warnings(
+    buggy_api: Api, caplog: pytest.LogCaptureFixture, payload: object
+) -> None:
+    r = buggy_api.tool_call("buggy", "takes_int", payload)  # type: ignore[arg-type]
+    assert r["error"]["code"] == "invalid_payload"
+    assert [rec.levelname for rec in caplog.records] == ["WARNING"]

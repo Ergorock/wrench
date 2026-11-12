@@ -61,6 +61,8 @@ class ToolRegistry:
         self._get_language = get_language
         self._instances: dict[str, ToolService] = {}
         self._lock = threading.Lock()
+        # pywebview runs each JS call on its own thread: a tool's actions are serialized.
+        self._call_locks = {tool_id: threading.Lock() for tool_id in self._tools}
 
     def manifests(self) -> list[ToolManifest]:
         return [t.manifest for t in self._tools.values()]
@@ -81,4 +83,6 @@ class ToolRegistry:
             return self._instances[tool_id]
 
     def call(self, tool_id: str, action: str, payload: dict[str, Any]) -> Any:
-        return self._instance(tool_id).invoke(action, payload)
+        service = self._instance(tool_id)
+        with self._call_locks[tool_id]:
+            return service.invoke(action, payload)

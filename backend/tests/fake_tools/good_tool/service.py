@@ -15,5 +15,11 @@ class FakeService(ToolService):
         self._count += 1
         return self._count
 
+    @action
+    def append(self, item: int) -> None:
+        data = self.ctx.storage.load()
+        data["items"] = [*data.get("items", []), item]
+        self.ctx.storage.save(data)
+
 
 SERVICE = FakeService

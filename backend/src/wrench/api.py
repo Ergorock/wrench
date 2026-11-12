@@ -23,8 +23,8 @@ def _fail(code: str, message: str) -> dict[str, Any]:
 
 
 class Api:
-    """Bridge exposed to the front. pywebview exposes public members only:
-    everything except the four bridge methods is private."""
+    """Bridge to the front. Only the four public methods are exposed to JS
+    (see `main._exposed`); everything else is private."""
 
     def __init__(
         self,
@@ -55,8 +55,6 @@ class Api:
             return _ok(fn())
         except ToolError as exc:
             return _fail(exc.code, exc.message)
-        except ValidationError as exc:
-            return _fail("invalid_settings", str(exc))
         except Exception as exc:
             logger.exception("Unhandled error in API call")
             return _fail("internal_error", str(exc))
@@ -80,7 +78,10 @@ class Api:
 
     def save_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
         def run() -> dict[str, Any]:
-            new = Settings.model_validate(settings)
+            try:
+                new = Settings.model_validate(settings)
+            except ValidationError as exc:
+                raise ToolError("invalid_settings", str(exc)) from exc
             with self._lock:
                 self._settings = new.model_copy(update={"window": self._settings.window})
                 self._store.save(self._settings)

@@ -53,6 +53,14 @@ def test_missing_language_uses_system_language(tmp_path):
     assert r.recovered is False and r.settings.language == "fr"
 
 
+def test_utf8_bom_is_accepted(tmp_path):
+    p = tmp_path / "settings.json"
+    p.write_text('{"theme": "dark"}', encoding="utf-8-sig")
+    assert p.read_bytes().startswith(b"\xef\xbb\xbf")
+    r = SettingsStore(p, "en").load()
+    assert r.recovered is False and r.settings.theme == "dark"
+
+
 def test_save_is_atomic_no_tmp_left(tmp_path):
     store = SettingsStore(tmp_path / "s.json", "en")
     store.save(default_settings("en"))

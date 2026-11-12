@@ -3,6 +3,7 @@ import json
 import locale
 import os
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -88,7 +89,7 @@ class SettingsStore:
             self.save(settings)
             return LoadResult(settings, False)
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
+            data = json.loads(self._path.read_text(encoding="utf-8-sig"))
             if not isinstance(data, dict):
                 raise ValueError("settings root is not an object")
             if "language" not in data:
@@ -102,6 +103,12 @@ class SettingsStore:
             return LoadResult(settings, True)
 
     def save(self, settings: Settings) -> None:
-        tmp = self._path.with_name(self._path.name + ".tmp")
-        tmp.write_text(settings.model_dump_json(indent=2), encoding="utf-8")
-        os.replace(tmp, self._path)
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=self._path.parent, suffix=".tmp", delete=False
+        ) as tmp:
+            tmp.write(settings.model_dump_json(indent=2))
+        try:
+            os.replace(tmp.name, self._path)
+        except BaseException:
+            os.unlink(tmp.name)
+            raise

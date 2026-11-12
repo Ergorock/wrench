@@ -2,6 +2,8 @@ import ctypes
 import logging
 import os
 import time
+from collections.abc import Callable
+from typing import Any
 
 import webview
 
@@ -26,6 +28,12 @@ _MESSAGES = {
 
 def _screens() -> list[ScreenRect]:
     return [ScreenRect(s.x, s.y, s.width, s.height) for s in webview.screens]
+
+
+def _exposed(api: Api) -> list[Callable[..., Any]]:
+    """The only Python callables reachable from JS. Passing `js_api=api` would let the page
+    reach private members too: pywebview resolves dotted names with plain getattr."""
+    return [api.get_bootstrap, api.save_settings, api.set_autostart, api.tool_call]
 
 
 def _show_webview_error(language: str) -> None:
@@ -73,7 +81,6 @@ def main() -> int:
         window = webview.create_window(
             "Wrench",
             url,
-            js_api=api,
             width=win.width,
             height=win.height,
             x=win.x,
@@ -81,6 +88,7 @@ def main() -> int:
             min_size=(800, 500),
         )
         assert window is not None
+        window.expose(*_exposed(api))
 
         # Recent normal (neither maximized nor minimized) geometries, in logical pixels.
         # Windows moves/resizes the window just before the maximized/minimized event, so
