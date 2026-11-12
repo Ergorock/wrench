@@ -3,6 +3,8 @@ from typing import Any
 import pytest
 
 from wrench.core.updater import (
+    INSTALLER_ARGS,
+    UNINSTALL_KEY,
     UpdateError,
     is_newer,
     parse_version,
@@ -102,4 +104,15 @@ def test_update_supported() -> None:
     assert not update_supported(exe, True, lambda: None)
     assert not update_supported(
         r"C:\dev\dist\Wrench\Wrench.exe", True, lambda: r"C:\Users\u\AppData\Local\Programs\Wrench"
+    )
+
+
+def test_installer_args_are_nsis() -> None:
+    assert INSTALLER_ARGS == ["/S", "/RELAUNCH"]
+
+
+def test_install_key_has_no_inno_suffix() -> None:
+    assert UNINSTALL_KEY == (
+        r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+        r"\{DF1A711B-045E-48E1-A43E-DCBD79719B83}"
     )

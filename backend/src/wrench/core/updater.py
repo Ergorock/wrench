@@ -30,10 +30,10 @@ ALLOWED_HOSTS = {
     "release-assets.githubusercontent.com",
 }
 TIMEOUT_S = 10
-INSTALLER_ARGS = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/RELAUNCH"]
+INSTALLER_ARGS = ["/S", "/RELAUNCH"]
 UNINSTALL_KEY = (
     r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
-    r"\{DF1A711B-045E-48E1-A43E-DCBD79719B83}_is1"
+    r"\{DF1A711B-045E-48E1-A43E-DCBD79719B83}"
 )
 INSTALL_LOCATION_VALUE = "InstallLocation"
 CHUNK_SIZE = 64 * 1024
