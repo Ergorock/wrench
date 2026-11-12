@@ -285,4 +285,3 @@ Il détecte aussi un dossier d'outil écarté par le registre.
 - [ ] `cd backend; uv run pytest; uv run ruff check .; uv run mypy src`
 - [ ] `cd frontend; npm test; npm run lint; npm run build`
 - [ ] Vérification manuelle avec `scripts/dev.ps1` : rendu en thème clair et sombre, en français et en anglais ; l'outil s'ouvre, se désactive puis se réactive dans *Paramètres > Outils*, et ses données persistent.
-- [ ] Une ligne est ajoutée dans `docs/ROADMAP.md` si l'outil complète le périmètre.

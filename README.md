@@ -75,6 +75,4 @@ Wrench vérifie les nouvelles versions publiées sur GitHub (au démarrage puis 
 
 ## Documentation
 
-- [Spécification du shell](docs/superpowers/specs/2026-11-12-wrench-shell-design.md)
 - [Créer un outil](docs/creating-a-tool.md)
-- [Feuille de route](docs/ROADMAP.md)
