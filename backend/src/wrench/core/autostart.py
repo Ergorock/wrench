@@ -1,3 +1,4 @@
+import logging
 import sys
 import winreg
 from typing import Protocol
@@ -52,6 +53,21 @@ class Autostart:
 
     def is_enabled(self) -> bool:
         return self._backend.get(VALUE_NAME) is not None
+
+    def refresh_path(self) -> None:
+        """Rewrite the Run value if the executable was moved since autostart was enabled."""
+        if not self.is_available():
+            return
+        current = self._backend.get(VALUE_NAME)
+        expected = f'"{self._executable}"'
+        if current is not None and current != expected:
+            try:
+                self._backend.set(VALUE_NAME, expected)
+            except OSError:
+                # A registry hiccup must not stop the application from starting.
+                logging.getLogger("wrench").warning(
+                    "Could not refresh autostart path", exc_info=True
+                )
 
     def set_enabled(self, enabled: bool) -> None:
         if not self.is_available():

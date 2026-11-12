@@ -33,3 +33,41 @@ def test_unavailable_in_dev() -> None:
     with pytest.raises(ToolError) as e:
         a.set_enabled(True)
     assert e.value.code == "autostart_unavailable"
+
+
+def test_refresh_rewrites_stale_path() -> None:
+    b = FakeBackend()
+    b.values["Wrench"] = '"C:\\Old\\Wrench.exe"'
+    Autostart(b, executable=r"C:\New\Wrench.exe", frozen=True).refresh_path()
+    assert b.values["Wrench"] == '"C:\\New\\Wrench.exe"'
+
+
+def test_refresh_does_nothing_when_disabled() -> None:
+    b = FakeBackend()
+    Autostart(b, executable="x", frozen=True).refresh_path()
+    assert b.values == {}
+
+
+def test_refresh_does_nothing_when_unavailable() -> None:
+    b = FakeBackend()
+    b.values["Wrench"] = '"C:\\Old\\Wrench.exe"'
+    Autostart(b, executable="python.exe", frozen=False).refresh_path()
+    assert b.values["Wrench"] == '"C:\\Old\\Wrench.exe"'
+
+
+def test_refresh_keeps_a_current_path() -> None:
+    b = FakeBackend()
+    b.values["Wrench"] = '"C:\\Program Files\\Wrench\\Wrench.exe"'
+    Autostart(b, executable=r"C:\Program Files\Wrench\Wrench.exe", frozen=True).refresh_path()
+    assert b.values["Wrench"] == '"C:\\Program Files\\Wrench\\Wrench.exe"'
+
+
+def test_refresh_survives_a_registry_error() -> None:
+    class FailingBackend(FakeBackend):
+        def set(self, name: str, value: str) -> None:
+            raise PermissionError("denied")
+
+    b = FailingBackend()
+    b.values["Wrench"] = '"C:\\Old\\Wrench.exe"'
+    Autostart(b, executable=r"C:\New\Wrench.exe", frozen=True).refresh_path()
+    assert b.values["Wrench"] == '"C:\\Old\\Wrench.exe"'

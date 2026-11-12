@@ -41,6 +41,16 @@ npm run lint
 npm run build
 ```
 
+## Build
+
+```powershell
+scripts/build.ps1
+```
+
+Le script compile le front (`npm ci`, `npm run build`), synchronise le backend (`uv sync`), puis lance PyInstaller (`--onedir --windowed`). Il s'arrête à la première erreur. Résultat : `dist/Wrench/Wrench.exe`. Il faut distribuer le dossier `dist/Wrench/` en entier : l'exécutable seul ne suffit pas. Python n'est pas nécessaire sur le poste cible ; le runtime WebView2 l'est.
+
+L'icône `backend/assets/wrench.ico` est provisoire. Elle se régénère avec `uv run --project backend python scripts/make_icon.py`.
+
 ## Documentation
 
 - [Spécification du shell](docs/superpowers/specs/2026-11-12-wrench-shell-design.md)
