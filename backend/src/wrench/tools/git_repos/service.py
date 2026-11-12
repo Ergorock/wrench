@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from wrench.sdk import ToolContext, ToolError, ToolService, action
 from wrench.shared.git import ops
 from wrench.shared.git.discovery import find_repos
+from wrench.shared.git.history import BranchList, CommitInfo, list_branches, list_commits
 from wrench.shared.git.jobs import RepoJobs
 from wrench.shared.git.ops import GitOpError
 from wrench.shared.git.runner import GitNotFound, find_git
@@ -275,6 +276,27 @@ class GitReposService(ToolService):
             # Unlike a repeated fetch/pull/push, dropping it would lose the typed message.
             raise ToolError("busy", "An operation is already running on this repository")
         return self._state()
+
+    @action
+    def get_branches(self, path: str) -> BranchList:
+        """Read-only and fast: answered synchronously, outside RepoJobs."""
+        self._require_git()
+        repo = self._require_repo(path)
+        try:
+            return list_branches(repo.path)
+        except GitOpError as exc:
+            raise ToolError(exc.code, exc.message) from exc
+
+    @action
+    def get_commits(
+        self, path: str, ref: str | None = None, skip: Annotated[int, Field(ge=0)] = 0
+    ) -> list[CommitInfo]:
+        self._require_git()
+        repo = self._require_repo(path)
+        try:
+            return list_commits(repo.path, ref, skip)
+        except GitOpError as exc:
+            raise ToolError(exc.code, exc.message) from exc
 
     @action
     def clear_error(self, path: str) -> State:
