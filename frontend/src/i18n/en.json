@@ -43,6 +43,7 @@
     "invalid_settings": "The settings provided are invalid.",
     "autostart_unavailable": "Autostart is not available.",
     "internal_error": "Internal application error.",
-    "toolLoadFailed": "This tool could not be loaded."
+    "toolLoadFailed": "This tool could not be loaded.",
+    "toolLoadRetry": "Retry"
   }
 }

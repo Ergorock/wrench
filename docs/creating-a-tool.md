@@ -147,7 +147,7 @@ L'export par défaut est un chargeur : le composant n'est téléchargé que quan
 export default () => import('./ShortcutsTool.vue')
 ```
 
-Si le chargement échoue, la coquille affiche un message traduit puis l'accueil.
+Si le chargement échoue, la coquille affiche un message traduit avec un bouton « Réessayer », puis l'accueil. L'erreur est écrite dans la console du WebView (visible en mode dev), pas dans `wrench.log`.
 
 ### Le composant
 

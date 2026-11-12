@@ -43,6 +43,7 @@
     "invalid_settings": "Les paramètres fournis sont invalides.",
     "autostart_unavailable": "Le démarrage automatique n’est pas disponible.",
     "internal_error": "Erreur interne de l’application.",
-    "toolLoadFailed": "Cet outil n’a pas pu être chargé."
+    "toolLoadFailed": "Cet outil n’a pas pu être chargé.",
+    "toolLoadRetry": "Réessayer"
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { lucideIcon } from '../icons'
 import { useShell } from '../state'
@@ -16,6 +16,8 @@ const icon = computed(() => lucideIcon(bootstrap.value?.tools.find((x) => x.id =
 const ToolComponent = Object.hasOwn(toolLoaders, props.toolId)
   ? defineAsyncComponent({ loader: toolLoaders[props.toolId], errorComponent: ToolLoadError })
   : null
+// Changing the key remounts the async wrapper, which calls the loader again.
+const attempt = ref(0)
 </script>
 
 <template>
@@ -25,7 +27,7 @@ const ToolComponent = Object.hasOwn(toolLoaders, props.toolId)
       <component :is="icon" :size="22" />
       <h1>{{ t(`tools.${toolId}.name`) }}</h1>
     </header>
-    <component :is="ToolComponent" />
+    <component :is="ToolComponent" :key="attempt" @retry="attempt++" />
   </section>
 </template>
 

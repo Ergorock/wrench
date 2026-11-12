@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick } from 'vue'
 import { i18n, setLanguage } from '../src/i18n'
 import en from '../src/i18n/en.json'
@@ -29,6 +29,39 @@ describe('ToolView', () => {
     const el = await mountToolView('broken')
     expect(el.textContent).toContain(en.errors.toolLoadFailed)
     expect(el.textContent).toContain(en.home.title)
+  })
+
+  it('journalise l’erreur de chargement dans la console', async () => {
+    setLanguage('en')
+    const error = new Error('chunk load failed')
+    toolLoaders.broken = () => Promise.reject(error)
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await mountToolView('broken')
+    expect(spy.mock.calls.some((call) => call.includes(error))).toBe(true)
+    spy.mockRestore()
+  })
+
+  it('propose de réessayer, et affiche l’outil si le second chargement réussit', async () => {
+    setLanguage('en')
+    let attempts = 0
+    toolLoaders.broken = () => {
+      attempts += 1
+      return attempts === 1
+        ? Promise.reject(new Error('chunk load failed'))
+        : Promise.resolve({ render: () => h('p', 'Tool loaded') })
+    }
+    const el = await mountToolView('broken')
+    const retry = [...el.querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === en.errors.toolLoadRetry,
+    )
+    expect(retry).toBeDefined()
+
+    retry!.click()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    await nextTick()
+    expect(attempts).toBe(2)
+    expect(el.textContent).toContain('Tool loaded')
+    expect(el.textContent).not.toContain(en.errors.toolLoadFailed)
   })
 
   it('affiche l’accueil si aucun composant n’existe pour cet outil', async () => {
