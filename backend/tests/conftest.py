@@ -12,6 +12,8 @@ from wrench.core.registry import ToolRegistry, discover_tools
 from wrench.core.settings import SettingsStore
 from wrench.core.updater import Updater
 
+pytest_plugins = ["git_fixtures"]
+
 
 class FakeBackend:
     def __init__(self) -> None:
