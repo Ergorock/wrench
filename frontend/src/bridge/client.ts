@@ -11,7 +11,8 @@ export class BridgeError extends Error {
 }
 
 export function waitForBridge(): Promise<void> {
-  if (window.pywebview?.api) return Promise.resolve()
+  // pywebview injects `api: {}` first and fills it just before firing pywebviewready.
+  if (typeof window.pywebview?.api?.get_bootstrap === 'function') return Promise.resolve()
   return new Promise((resolve) => {
     window.addEventListener('pywebviewready', () => resolve(), { once: true })
   })

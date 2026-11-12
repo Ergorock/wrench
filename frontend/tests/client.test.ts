@@ -42,8 +42,21 @@ describe('bridge client', () => {
   })
 
   it('waitForBridge résout immédiatement si le pont existe', async () => {
-    mockApi({})
+    mockApi({ get_bootstrap: async () => ({ ok: true, data: {} }) })
     await expect(waitForBridge()).resolves.toBeUndefined()
+  })
+
+  it("waitForBridge attend pywebviewready si l'api est encore vide", async () => {
+    mockApi({})
+    let done = false
+    const p = waitForBridge().then(() => {
+      done = true
+    })
+    await Promise.resolve()
+    expect(done).toBe(false)
+    window.dispatchEvent(new Event('pywebviewready'))
+    await p
+    expect(done).toBe(true)
   })
 
   it("waitForBridge attend l'évènement pywebviewready", async () => {
