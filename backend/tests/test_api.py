@@ -178,7 +178,7 @@ def test_save_settings_keeps_python_last_check(api: Api) -> None:
 
 def test_open_url_restricted(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     opened: list[str] = []
-    monkeypatch.setattr(webbrowser, "open", opened.append)
+    monkeypatch.setattr(webbrowser, "open", lambda u: opened.append(u) or True)
     good = "https://github.com/Ergorock/wrench/releases/tag/v1.0.0"
     assert api.open_url(good)["ok"]
     for bad in (
@@ -187,7 +187,22 @@ def test_open_url_restricted(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
         "https://github.com/Ergorock/wrench",
         "https://github.com/Ergorock/wrench/ x",
         "https://github.com/Ergorock/wrench/\nx",
+        "https://github.com/Ergorock/wrench/../../x/y",
+        "https://github.com/Ergorock/wrench/./x",
+        "https://github.com/Ergorock/wrench/..",
+        "https://github.com/Ergorock/wrench/..?a=1",
+        "https://github.com/Ergorock/wrench/a/../../x",
+        "https://github.com/Ergorock/wrench/%2e%2e/x",
+        "https://github.com/Ergorock/wrench/a%2Fb",
+        "https://github.com/Ergorock/wrench/a%5Cb",
+        "https://github.com/Ergorock/wrench/a\\b",
         None,
     ):
         assert api.open_url(bad)["error"]["code"] == "invalid_payload"  # type: ignore[arg-type]
     assert opened == [good]
+
+
+def test_open_url_reports_browser_failure(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(webbrowser, "open", lambda u: False)
+    r = api.open_url("https://github.com/Ergorock/wrench/releases")
+    assert r["error"]["code"] == "open_failed"

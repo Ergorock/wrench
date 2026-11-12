@@ -161,14 +161,24 @@ class Api:
 
     def open_url(self, url: str) -> dict[str, Any]:
         def run() -> None:
-            # Prefix check, plus no space or control character (< 0x20) so the string cannot
-            # be reinterpreted by the shell/browser launcher.
+            # Prefix check, plus: no space/control char (< 0x20), no backslash or percent
+            # (encoded or alternate separators), and no "." / ".." path segment, which a
+            # browser would normalize to escape the repository prefix.
             if (
                 not isinstance(url, str)
                 or not url.startswith(RELEASES_URL_PREFIX)
-                or any(ch <= " " for ch in url)
+                or any(ch <= " " or ch in "\\%" for ch in url)
+                or any(
+                    seg in (".", "..")
+                    for seg in url[len(RELEASES_URL_PREFIX) :]
+                    .split("?")[0]
+                    .split("#")[0]
+                    .split("/")
+                )
             ):
                 raise ToolError("invalid_payload", "URL not allowed")
-            webbrowser.open(url)
+            # webbrowser.open returns False when no browser could be launched: "open_failed".
+            if not webbrowser.open(url):
+                raise ToolError("open_failed", "Could not open the browser")
 
         return self._envelope(run)
