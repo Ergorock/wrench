@@ -83,6 +83,38 @@ def test_retry_after_integrity_error(tmp_path):
     assert http.download_calls == 2
 
 
+def test_integrity_error_with_locked_file_then_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def locked(self: Path, missing_ok: bool = False) -> None:
+        raise PermissionError("locked")
+
+    launched: list[Path] = []
+    u, http = make(tmp_path, b"x", sha256="00" * 32, launch=launched.append)
+    u.check()
+    monkeypatch.setattr(Path, "unlink", locked)
+    u.start_install()
+    u.wait(5)
+    s = u.snapshot()
+    assert s["status"] == "error" and s["error_code"] == "update_integrity" and launched == []
+    u.start_install()
+    u.wait(5)
+    assert http.download_calls == 2
+    assert u.snapshot()["error_code"] == "update_integrity"
+
+
+def test_close_handler_failure_sets_error(tmp_path):
+    def boom() -> None:
+        raise RuntimeError("no window")
+
+    u, _ = make(tmp_path, request_close=boom)
+    u.check()
+    u.start_install()
+    u.wait(5)
+    s = u.snapshot()
+    assert s["status"] == "error" and s["error_code"] == "update_install_failed"
+
+
 def test_retry_same_info_after_error(tmp_path):
     u, http = make(tmp_path, b"x")
     calls = {"n": 0}

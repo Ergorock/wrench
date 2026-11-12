@@ -42,6 +42,14 @@ _VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.\-]+)?$")
 _DIGEST_RE = re.compile(r"^sha256:([0-9a-fA-F]{64})$")
 
 
+def _discard(path: Path) -> None:
+    """Best-effort delete: a locked file (antivirus, Windows) must never mask the real error."""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as e:
+        logger.warning("Could not delete %s: %s", path, e)
+
+
 class UpdateError(Exception):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -216,7 +224,7 @@ class UrllibClient:
                     received += len(chunk)
                     on_progress(received, total)
         except BaseException as e:
-            dest.unlink(missing_ok=True)
+            _discard(dest)
             if isinstance(e, UpdateError):
                 raise
             if isinstance(e, (OSError, ValueError, http.client.HTTPException)):
@@ -235,10 +243,10 @@ def verify_file(path: Path, size: int, sha256: str) -> None:
                     digest.update(chunk)
             ok = digest.hexdigest() == sha256.lower()
     except OSError as e:
-        path.unlink(missing_ok=True)
+        _discard(path)
         raise UpdateError("update_integrity", f"Cannot read downloaded file: {e}") from e
     if not ok:
-        path.unlink(missing_ok=True)
+        _discard(path)
         raise UpdateError("update_integrity", "Downloaded file failed verification")
 
 
@@ -379,7 +387,7 @@ class Updater:
             return
         except Exception:
             logger.exception("Unexpected error while downloading the update")
-            path.unlink(missing_ok=True)
+            _discard(path)
             self._set_error("update_network")
             return
         with self._lock:
@@ -398,3 +406,4 @@ class Updater:
             self._request_close()
         except Exception:
             logger.exception("Close handler failed")
+            self._set_error("update_install_failed")

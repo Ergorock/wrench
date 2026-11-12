@@ -81,6 +81,21 @@ def test_verify_file(tmp_path: Path) -> None:
     assert not p.exists()
 
 
+def test_verify_file_locked_file_still_integrity_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    p = tmp_path / "f"
+    p.write_bytes(b"abc")
+
+    def locked(self: Path, missing_ok: bool = False) -> None:
+        raise PermissionError("locked")
+
+    monkeypatch.setattr(Path, "unlink", locked)
+    with pytest.raises(UpdateError) as e:
+        verify_file(p, 3, "00" * 32)
+    assert e.value.code == "update_integrity"
+
+
 def test_verify_file_wrong_size(tmp_path: Path) -> None:
     p = tmp_path / "f"
     p.write_bytes(b"abc")
