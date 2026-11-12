@@ -2,6 +2,11 @@
 
 Wrench est une application de bureau Windows qui regroupe de petits outils du quotidien derrière une interface unique : un bandeau d'outils personnalisable (ordre, favoris), des paramètres (langue `fr`/`en`, thème clair, sombre ou système) et des notifications. Le socle (le shell) est livré avec un premier outil, « Raccourcis Windows » ; d'autres outils s'y branchent en suivant le guide [Créer un outil](docs/creating-a-tool.md).
 
+## Outils
+
+- **Raccourcis Windows** : les raccourcis clavier de Windows 11, groupés et faciles à rechercher.
+- **Dépôts Git** : l'état de tous les dépôts git rangés sous un ou plusieurs dossiers racines (travail non commité, commits à pousser ou à tirer, conflits), avec `fetch`, `pull` en avance rapide uniquement, `push` (jamais forcé) et commit de toutes les modifications. Cet outil utilise le `git` installé sur le poste (`winget install Git.Git`). Wrench ne stocke aucun identifiant : l'authentification passe par git et le gestionnaire d'identifiants Windows.
+
 ## Prérequis
 
 - Python 3.12 et [uv](https://docs.astral.sh/uv/)
