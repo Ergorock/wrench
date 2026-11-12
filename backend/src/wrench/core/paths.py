@@ -26,6 +26,13 @@ def logs_dir() -> Path:
     return path
 
 
+def webview_profile_dir() -> Path:
+    """Dedicated WebView2 profile, so Wrench does not share %APPDATA%\\pywebview."""
+    path = app_data_dir() / "webview2"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 

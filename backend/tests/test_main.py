@@ -1,10 +1,13 @@
 import logging
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
 from wrench import main as wrench_main
 from wrench.api import Api
+from wrench.core.window_state import ScreenRect
 from wrench.main import _exposed
 
 
@@ -72,3 +75,21 @@ def test_generic_message_is_english_when_language_is_not_french() -> None:
     text = wrench_main._startup_error_text("en", Path("C:/x/wrench.log"))
     assert "C:" in text and "wrench.log" in text
     assert "cannot start" in text
+
+
+def test_webview_starts_with_dedicated_profile_and_free_port(
+    startup: dict[str, list[str]], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    started: dict[str, Any] = {}
+    monkeypatch.setattr(wrench_main, "is_webview2_installed", lambda: True)
+    monkeypatch.setattr(wrench_main, "find_free_port", lambda: 51234)
+    monkeypatch.setattr(wrench_main, "_screens", lambda: [ScreenRect(0, 0, 1920, 1080)])
+    monkeypatch.setattr(wrench_main.webview, "create_window", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(wrench_main.webview, "start", lambda **kwargs: started.update(kwargs))
+
+    assert wrench_main.main() == 0
+
+    assert started["storage_path"] == str(tmp_path / "webview2")
+    assert started["http_port"] == 51234
+    assert started["http_port"] != 42001
+    assert started["private_mode"] is False

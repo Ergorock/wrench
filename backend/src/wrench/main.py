@@ -15,7 +15,7 @@ from wrench.core.logging_setup import configure_logging
 from wrench.core.registry import ToolRegistry, discover_tools
 from wrench.core.settings import SettingsStore, WindowSettings, detect_system_language
 from wrench.core.single_instance import acquire, focus_existing_window
-from wrench.core.webview2 import is_webview2_installed
+from wrench.core.webview2 import find_free_port, is_webview2_installed
 from wrench.core.window_state import ScreenRect, fit_to_screens
 
 logger = logging.getLogger("wrench")
@@ -186,5 +186,11 @@ def _run() -> int:
     window.events.minimized += on_minimized
     window.events.restored += on_restored
     window.events.closing += on_closing
-    webview.start(gui="edgechromium", debug=dev, private_mode=False)
+    webview.start(
+        gui="edgechromium",
+        debug=dev,
+        private_mode=False,
+        storage_path=str(paths.webview_profile_dir()),
+        http_port=find_free_port(),
+    )
     return 0

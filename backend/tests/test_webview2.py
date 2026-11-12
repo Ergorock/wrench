@@ -1,6 +1,8 @@
+import socket
+
 import pytest
 
-from wrench.core.webview2 import HKCU_SUBKEY, HKLM_SUBKEY, is_webview2_installed
+from wrench.core.webview2 import HKCU_SUBKEY, HKLM_SUBKEY, find_free_port, is_webview2_installed
 
 
 def reader(values: dict[tuple[str, str], str | None]):
@@ -43,3 +45,10 @@ def test_not_installed_when_keys_are_missing() -> None:
 
 def test_default_reader_does_not_raise() -> None:
     assert isinstance(is_webview2_installed(), bool)
+
+
+def test_find_free_port_returns_a_bindable_port() -> None:
+    port = find_free_port()
+    assert 1024 <= port <= 65535
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", port))

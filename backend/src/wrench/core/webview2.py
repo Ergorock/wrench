@@ -1,3 +1,4 @@
+import socket
 import winreg
 from collections.abc import Callable
 
@@ -32,3 +33,13 @@ def is_webview2_installed(read_pv: ReadPv = _read_pv_from_registry) -> bool:
         if version and version != "0.0.0.0":
             return True
     return False
+
+
+def find_free_port() -> int:
+    """A free local TCP port chosen by the OS.
+
+    pywebview forces its fixed default port (42001) when `private_mode=False` and no
+    `http_port` is given, so Wrench passes its own."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])

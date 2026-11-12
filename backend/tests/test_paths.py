@@ -12,3 +12,10 @@ def test_app_data_dir_uses_override(tmp_path, monkeypatch):
 
 def test_resource_dir_is_repo_root_in_dev():
     assert (paths.resource_dir() / "backend" / "pyproject.toml").is_file()
+
+
+def test_webview_profile_dir_is_dedicated_and_follows_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("WRENCH_DATA_DIR", str(tmp_path / "data"))
+    profile = paths.webview_profile_dir()
+    assert profile == tmp_path / "data" / "webview2"
+    assert profile.is_dir()
