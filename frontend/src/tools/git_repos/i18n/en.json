@@ -121,7 +121,7 @@
     "local": "Local ({n})",
     "remote": "Remote ({n})",
     "current": "current",
-    "isMain": "main",
+    "isMain": "main branch",
     "merged": "✓ merged",
     "mergedTitle": "All its commits are in {main}.",
     "notInMain": "+{n} commit | +{n} commits",
