@@ -1,0 +1,44 @@
+{
+  "app": { "name": "Wrench" },
+  "nav": {
+    "favorites": "Favoris",
+    "settings": "Paramètres",
+    "collapse": "Réduire le menu",
+    "expand": "Développer le menu",
+    "pin": "Ajouter aux favoris",
+    "unpin": "Retirer des favoris"
+  },
+  "categories": {
+    "system": "Système",
+    "productivity": "Productivité",
+    "development": "Développement",
+    "files": "Fichiers"
+  },
+  "home": {
+    "title": "Bienvenue dans Wrench",
+    "body": "Votre boîte à outils pour Windows. Aucun outil n’est encore installé : ils apparaîtront ici et dans le menu de gauche dès qu’ils seront disponibles.",
+    "openSettings": "Ouvrir les paramètres"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "tabs": { "general": "Général", "appearance": "Apparence", "tools": "Outils" },
+    "language": "Langue",
+    "autostart": "Lancer Wrench au démarrage de Windows",
+    "autostartUnavailable": "Le démarrage automatique n’est pas disponible dans cette installation.",
+    "theme": "Thème",
+    "themes": { "light": "Clair", "dark": "Sombre", "system": "Système" },
+    "toolVersion": "Version {version}"
+  },
+  "warnings": {
+    "settings_recovered": "Le fichier de paramètres était illisible : il a été réinitialisé et une copie de sauvegarde a été conservée."
+  },
+  "errors": {
+    "generic": "Une erreur est survenue.",
+    "unknown_tool": "Outil inconnu.",
+    "unknown_action": "Action inconnue pour cet outil.",
+    "invalid_payload": "Les données envoyées sont invalides.",
+    "invalid_settings": "Les paramètres fournis sont invalides.",
+    "autostart_unavailable": "Le démarrage automatique n’est pas disponible.",
+    "internal_error": "Erreur interne de l’application."
+  }
+}
