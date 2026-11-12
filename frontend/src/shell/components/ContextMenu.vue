@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Pin, PinOff } from 'lucide-vue-next'
+import { Pin, PinOff } from '@lucide/vue'
 import { useShell } from '../state'
 
 const props = defineProps<{ x: number; y: number; toolId: string }>()

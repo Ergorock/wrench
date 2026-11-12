@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { Box, FileText, Monitor } from 'lucide-vue-next'
+import { Box, Keyboard, Monitor } from '@lucide/vue'
 import { BridgeError } from '../src/bridge/client'
 import { useTool } from '../src/bridge/useTool'
 import { setLanguage } from '../src/i18n'
@@ -16,8 +16,16 @@ afterEach(() => {
 describe('lucideIcon', () => {
   it('résout les noms kebab-case et replie sur Box', () => {
     expect(lucideIcon('monitor')).toBe(Monitor)
-    expect(lucideIcon('file-text')).toBe(FileText)
+    expect(lucideIcon('keyboard')).toBe(Keyboard)
     expect(lucideIcon('does-not-exist')).toBe(Box)
+  })
+
+  it('connaît les icônes des catégories et de l’outil, et replie sur Box pour un nom inconnu', () => {
+    for (const name of ['monitor', 'zap', 'code', 'folder', 'keyboard']) {
+      expect(lucideIcon(name), name).not.toBe(Box)
+    }
+    expect(lucideIcon('')).toBe(Box)
+    expect(lucideIcon('box')).toBe(Box)
   })
 })
 

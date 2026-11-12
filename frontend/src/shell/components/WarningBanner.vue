@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { TriangleAlert, X } from 'lucide-vue-next'
+import { TriangleAlert, X } from '@lucide/vue'
 import { useShell } from '../state'
 
 const { t } = useI18n()

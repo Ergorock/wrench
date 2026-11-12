@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings, Star } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings, Star } from '@lucide/vue'
 import type { ToolManifest } from '../../bridge/types'
 import type { SidebarModel } from '../sidebarOrder'
 import { lucideIcon } from '../icons'

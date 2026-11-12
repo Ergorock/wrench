@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Wrench } from 'lucide-vue-next'
+import { Wrench } from '@lucide/vue'
 import { useShell } from '../state'
 
 const { t } = useI18n()
