@@ -44,4 +44,5 @@ npm run build
 ## Documentation
 
 - [Spécification du shell](docs/superpowers/specs/2026-11-12-wrench-shell-design.md)
+- [Créer un outil](docs/creating-a-tool.md)
 - [Feuille de route](docs/ROADMAP.md)
