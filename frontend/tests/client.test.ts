@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { BridgeError, getBootstrap, saveSettings, setAutostart, toolCall, waitForBridge } from '../src/bridge/client'
+import {
+  BridgeError,
+  checkForUpdates,
+  getBootstrap,
+  getUpdateStatus,
+  installUpdate,
+  openUrl,
+  saveSettings,
+  setAutostart,
+  toolCall,
+  waitForBridge,
+} from '../src/bridge/client'
 
 type Api = Record<string, (...args: unknown[]) => Promise<unknown>>
 
@@ -69,5 +80,22 @@ describe('bridge client', () => {
     window.dispatchEvent(new Event('pywebviewready'))
     await p
     expect(done).toBe(true)
+  })
+})
+
+describe('bridge client, mises à jour', () => {
+  it('getUpdateStatus, checkForUpdates, installUpdate et openUrl déballent', async () => {
+    const seen: unknown[][] = []
+    mockApi({
+      get_update_status: async () => ({ ok: true, data: { status: 'idle' } }),
+      check_for_updates: async () => ({ ok: true, data: { status: 'up_to_date' } }),
+      install_update: async () => ({ ok: true, data: { status: 'downloading' } }),
+      open_url: async (...a) => (seen.push(a), { ok: true, data: null }),
+    })
+    expect(await getUpdateStatus()).toEqual({ status: 'idle' })
+    expect(await checkForUpdates()).toEqual({ status: 'up_to_date' })
+    expect(await installUpdate()).toEqual({ status: 'downloading' })
+    await openUrl('https://github.com/Ergorock/wrench/releases')
+    expect(seen[0]).toEqual(['https://github.com/Ergorock/wrench/releases'])
   })
 })

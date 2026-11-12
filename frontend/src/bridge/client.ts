@@ -1,4 +1,4 @@
-import type { AutostartState, Bootstrap, Envelope, Settings } from './types'
+import type { AutostartState, Bootstrap, Envelope, Settings, UpdateStatus } from './types'
 
 export class BridgeError extends Error {
   code: string
@@ -40,3 +40,11 @@ export const setAutostart = (enabled: boolean): Promise<AutostartState> =>
 export function toolCall<T>(toolId: string, action: string, payload?: object): Promise<T> {
   return unwrap(api().tool_call(toolId, action, payload))
 }
+
+export const getUpdateStatus = (): Promise<UpdateStatus> => unwrap(api().get_update_status())
+
+export const checkForUpdates = (): Promise<UpdateStatus> => unwrap(api().check_for_updates())
+
+export const installUpdate = (): Promise<UpdateStatus> => unwrap(api().install_update())
+
+export const openUrl = (url: string): Promise<null> => unwrap(api().open_url(url))
