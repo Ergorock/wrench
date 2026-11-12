@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import os
+import time
 
 import webview
 
@@ -15,6 +16,7 @@ from wrench.core.window_state import ScreenRect, fit_to_screens
 
 logger = logging.getLogger("wrench")
 
+SETTLE_SECONDS = 0.5
 DEV_URL = "http://localhost:5173"
 _MESSAGES = {
     "fr": "Wrench ne peut pas démarrer : le composant WebView2 est introuvable ou a échoué.",
@@ -57,7 +59,17 @@ def main() -> int:
 
     url = DEV_URL if dev else str(paths.frontend_dist_dir() / "index.html")
     try:
-        win = fit_to_screens(api._current().window, _screens())
+        screens = _screens()
+        win = fit_to_screens(api._current().window, screens)
+        if win.x is None or win.y is None:
+            # pywebview's CenterScreen is applied before the size, so it is not centered.
+            primary = screens[0]
+            win = win.model_copy(
+                update={
+                    "x": primary.x + (primary.width - win.width) // 2,
+                    "y": primary.y + (primary.height - win.height) // 2,
+                }
+            )
         window = webview.create_window(
             "Wrench",
             url,
@@ -70,30 +82,57 @@ def main() -> int:
         )
         assert window is not None
 
-        state = {"maximized": win.maximized}
+        # Recent normal (neither maximized nor minimized) geometries, in logical pixels.
+        # Windows moves/resizes the window just before the maximized/minimized event, so
+        # snapshots younger than SETTLE_SECONDS are discarded when the state changes.
+        history = [(time.monotonic(), win.model_copy(update={"maximized": False}))]
+        state = {"maximized": win.maximized, "minimized": False}
+
+        def record(**changes: int) -> None:
+            if not state["maximized"] and not state["minimized"]:
+                history.append((time.monotonic(), history[-1][1].model_copy(update=changes)))
+                del history[:-20]
+
+        def normal() -> WindowSettings:
+            return history[-1][1]
+
+        def discard_recent() -> None:
+            cutoff = time.monotonic() - SETTLE_SECONDS
+            while len(history) > 1 and history[-1][0] > cutoff:
+                history.pop()
 
         def on_shown() -> None:
             if state["maximized"]:
                 window.maximize()
 
+        def on_moved(x: int, y: int) -> None:
+            if x > -30000:
+                record(x=x, y=y)
+
+        def on_resized(width: int, height: int) -> None:
+            if width > 0 and height > 0:
+                record(width=width, height=height)
+
+        def on_maximized() -> None:
+            discard_recent()
+            state.update(maximized=True, minimized=False)
+
+        def on_minimized() -> None:
+            discard_recent()
+            state["minimized"] = True
+
+        def on_restored() -> None:
+            state.update(maximized=False, minimized=False)
+
         def on_closing() -> None:
-            current = api._current().window
-            if state["maximized"]:
-                api._save_window(current.model_copy(update={"maximized": True}))
-            else:
-                api._save_window(
-                    WindowSettings(
-                        x=window.x,
-                        y=window.y,
-                        width=window.width,
-                        height=window.height,
-                        maximized=False,
-                    )
-                )
+            api._save_window(normal().model_copy(update={"maximized": state["maximized"]}))
 
         window.events.shown += on_shown
-        window.events.maximized += lambda: state.update(maximized=True)
-        window.events.restored += lambda: state.update(maximized=False)
+        window.events.moved += on_moved
+        window.events.resized += on_resized
+        window.events.maximized += on_maximized
+        window.events.minimized += on_minimized
+        window.events.restored += on_restored
         window.events.closing += on_closing
         webview.start(gui="edgechromium", debug=dev, private_mode=False)
     except Exception:
