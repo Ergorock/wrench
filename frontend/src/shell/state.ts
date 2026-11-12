@@ -67,18 +67,20 @@ async function init(): Promise<void> {
 let queue: Promise<void> = Promise.resolve()
 
 function update(mutator: (s: Settings) => void): Promise<void> {
-  queue = queue.then(async () => {
+  const task = async (): Promise<void> => {
     const prev = settings.value
-    const draft = JSON.parse(JSON.stringify(prev)) as Settings
-    mutator(draft)
-    apply(draft) // optimistic, so drag-and-drop does not snap back
     try {
+      const draft = JSON.parse(JSON.stringify(prev)) as Settings
+      mutator(draft)
+      apply(draft) // optimistic, so drag-and-drop does not snap back
       apply(await saveSettings(draft))
     } catch (err) {
       apply(prev)
       toastError(err)
     }
-  })
+  }
+  // The queue never stays rejected, so one failure cannot block later updates.
+  queue = queue.then(task).catch(() => {})
   return queue
 }
 

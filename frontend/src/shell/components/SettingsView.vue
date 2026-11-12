@@ -40,12 +40,17 @@ function chooseTheme(theme: ThemePref): void {
   })
 }
 
-async function onAutostart(enabled: boolean): Promise<void> {
+async function onAutostart(e: Event): Promise<void> {
+  const box = e.target as HTMLInputElement
   try {
-    const state = await setAutostart(enabled)
+    const state = await setAutostart(box.checked)
     if (bootstrap.value) bootstrap.value.autostart = state
-    settings.value.autostart = state.enabled
+    // Through the update queue, so an in-flight save cannot bring back the old value.
+    void update((s) => {
+      s.autostart = state.enabled
+    })
   } catch (err) {
+    box.checked = autostart.value.enabled
     toastError(err)
   }
 }
@@ -94,7 +99,7 @@ const checkedOf = (e: Event) => (e.target as HTMLInputElement).checked
             type="checkbox"
             :checked="autostart.enabled"
             :disabled="!autostart.available"
-            @change="onAutostart(checkedOf($event))"
+            @change="onAutostart"
           />
           <span>{{ t('settings.autostart') }}</span>
         </label>

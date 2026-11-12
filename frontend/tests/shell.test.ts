@@ -86,4 +86,19 @@ describe('useShell', () => {
     expect(shell.settings.value.sidebar.favorites).toEqual(['a'])
     expect(toasts.value.map((t) => t.message)).toEqual([en.errors.invalid_settings])
   })
+
+  it('un mutator qui lève ne bloque pas les updates suivants', async () => {
+    ;(window as unknown as { pywebview: unknown }).pywebview = {
+      api: { save_settings: async (s: unknown) => ({ ok: true, data: s }) },
+    }
+    const shell = useShell()
+    await shell.update(() => {
+      throw new Error('boom')
+    })
+    expect(toasts.value.map((t) => t.message)).toEqual([en.errors.generic])
+    await shell.update((s) => {
+      s.sidebar.collapsed = true
+    })
+    expect(shell.settings.value.sidebar.collapsed).toBe(true)
+  })
 })
