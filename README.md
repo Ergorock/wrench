@@ -63,6 +63,14 @@ Le script lance `scripts/build.ps1` (sauf avec `-SkipAppBuild`, qui réutilise `
 
 L'installateur n'est pas signé : Windows SmartScreen affichera un avertissement au premier lancement (« Informations complémentaires », puis « Exécuter quand même »).
 
+### Mises à jour
+
+Wrench vérifie les nouvelles versions publiées sur GitHub (au démarrage puis toutes les 24 h, désactivable dans Paramètres > Général) et propose de les installer. Cela ne fonctionne que pour une version **installée** avec l'installateur : en développement ou depuis `dist/`, la section est grisée.
+
+- Si une mise à jour échoue pendant l'installation, Wrench peut ne plus démarrer : relancez l'installateur, téléchargé dans `%TEMP%\Wrench-update\` ou disponible sur la page des releases.
+- Les installateurs téléchargés restent dans `%TEMP%\Wrench-update\` : ils peuvent être supprimés sans risque.
+- Certains antivirus ou protections d'entreprise bloquent les installateurs non signés.
+
 ## Documentation
 
 - [Spécification du shell](docs/superpowers/specs/2026-11-12-wrench-shell-design.md)
