@@ -1,4 +1,3 @@
-import hashlib
 import subprocess
 import threading
 from collections.abc import Callable
@@ -6,57 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import FakeHttp, release_for
 
 from wrench.core import updater as updater_mod
 from wrench.core.updater import UpdateError, Updater, launch_installer_detached
-
-
-def release_for(payload: bytes, sha256: str | None = None) -> dict[str, Any]:
-    return {
-        "tag_name": "v1.3.0",
-        "html_url": "https://github.com/Ergorock/wrench/releases/tag/v1.3.0",
-        "draft": False,
-        "prerelease": False,
-        "assets": [
-            {
-                "name": "Wrench-Setup-1.3.0.exe",
-                "browser_download_url": "https://github.com/Ergorock/wrench/releases/download/v1.3.0/Wrench-Setup-1.3.0.exe",
-                "size": len(payload),
-                "digest": "sha256:" + (sha256 or hashlib.sha256(payload).hexdigest()),
-            }
-        ],
-    }
-
-
-class FakeHttp:
-    def __init__(
-        self, release: Any = None, error: Exception | None = None, slow: bool = False
-    ) -> None:
-        self.release = release
-        self.error = error
-        self.slow = slow
-        self.download_calls = 0
-        self.started = threading.Event()
-        self.gate = threading.Event()
-        if not slow:
-            self.gate.set()
-
-    def get_json(self, url: str) -> Any:
-        if self.error is not None:
-            raise self.error
-        return self.release
-
-    def download(self, url: str, dest: Path, on_progress: Callable[[int, int], None]) -> None:
-        self.download_calls += 1
-        self.started.set()
-        self.gate.wait(5)
-        payload = self._payload()
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(payload)
-        on_progress(len(payload), len(payload))
-
-    def _payload(self) -> bytes:
-        return getattr(self, "payload", b"x")
 
 
 def make(tmp_path: Path, payload: bytes = b"installer", **kw: Any) -> tuple[Updater, FakeHttp]:

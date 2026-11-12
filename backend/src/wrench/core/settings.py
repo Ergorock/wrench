@@ -37,6 +37,13 @@ class WindowSettings(BaseModel):
     maximized: bool = False
 
 
+class UpdateSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    auto_check: bool = True
+    last_check: datetime | None = None
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -48,6 +55,7 @@ class Settings(BaseModel):
     tools: dict[str, ToolSettings] = {}
     window: WindowSettings = Field(default_factory=WindowSettings)
     last_tool: str | None = None
+    updates: UpdateSettings = Field(default_factory=UpdateSettings)
 
 
 def detect_system_language() -> str:

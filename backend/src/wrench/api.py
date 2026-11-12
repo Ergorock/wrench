@@ -1,17 +1,23 @@
 import logging
 import threading
+import webbrowser
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
 
+from wrench._version import __version__
 from wrench.core.autostart import Autostart
 from wrench.core.categories import CATEGORIES
 from wrench.core.registry import ToolRegistry
 from wrench.core.settings import Settings, SettingsStore, WindowSettings
+from wrench.core.updater import UpdateError, Updater
 from wrench.sdk import ToolError
 
 logger = logging.getLogger("wrench.api")
+
+RELEASES_URL_PREFIX = "https://github.com/Ergorock/wrench/"
 
 
 def _ok(data: Any) -> dict[str, Any]:
@@ -23,7 +29,7 @@ def _fail(code: str, message: str) -> dict[str, Any]:
 
 
 class Api:
-    """Bridge to the front. Only the four public methods are exposed to JS
+    """Bridge to the front. Only the eight public methods are exposed to JS
     (see `main._exposed`); everything else is private."""
 
     def __init__(
@@ -33,12 +39,14 @@ class Api:
         registry: ToolRegistry,
         autostart: Autostart,
         warnings: list[str],
+        updater: Updater | None = None,
     ) -> None:
         self._store = store
         self._settings = settings
         self._registry = registry
         self._autostart = autostart
         self._warnings = warnings
+        self._updater = updater
         self._lock = threading.Lock()
 
     def _current(self) -> Settings:
@@ -53,7 +61,7 @@ class Api:
     def _envelope(self, fn: Callable[[], Any]) -> dict[str, Any]:
         try:
             return _ok(fn())
-        except ToolError as exc:
+        except (ToolError, UpdateError) as exc:
             return _fail(exc.code, exc.message)
         except Exception as exc:
             logger.exception("Unhandled error in API call")
@@ -83,7 +91,14 @@ class Api:
             except ValidationError as exc:
                 raise ToolError("invalid_settings", str(exc)) from exc
             with self._lock:
-                self._settings = new.model_copy(update={"window": self._settings.window})
+                # window and updates.last_check are owned by Python; the front only drives
+                # updates.auto_check, so a stale last_check must not overwrite the real one.
+                updates = new.updates.model_copy(
+                    update={"last_check": self._settings.updates.last_check}
+                )
+                self._settings = new.model_copy(
+                    update={"window": self._settings.window, "updates": updates}
+                )
                 self._store.save(self._settings)
                 return self._settings.model_dump(mode="json")
 
@@ -105,3 +120,55 @@ class Api:
         self, tool_id: str, action: str, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         return self._envelope(lambda: self._registry.call(tool_id, action, payload or {}))
+
+    def get_update_status(self) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            if self._updater is None:
+                return {
+                    "supported": False,
+                    "current_version": __version__,
+                    "status": "idle",
+                    "info": None,
+                    "progress": 0.0,
+                    "error_code": None,
+                }
+            return self._updater.snapshot()
+
+        return self._envelope(run)
+
+    def _require_updater(self) -> Updater:
+        if self._updater is None:
+            raise UpdateError("update_unsupported", "Updates are not supported for this install")
+        return self._updater
+
+    def check_for_updates(self) -> dict[str, Any]:
+        def run() -> dict[str, Any]:
+            snapshot = self._require_updater().check()
+            # Reached only when a check actually ran (update_unsupported raises above); a check
+            # that ended in status "error" still counts, so it is not retried in a tight loop.
+            with self._lock:
+                updates = self._settings.updates.model_copy(
+                    update={"last_check": datetime.now(UTC)}
+                )
+                self._settings = self._settings.model_copy(update={"updates": updates})
+                self._store.save(self._settings)
+            return snapshot
+
+        return self._envelope(run)
+
+    def install_update(self) -> dict[str, Any]:
+        return self._envelope(lambda: self._require_updater().start_install())
+
+    def open_url(self, url: str) -> dict[str, Any]:
+        def run() -> None:
+            # Prefix check, plus no space or control character (< 0x20) so the string cannot
+            # be reinterpreted by the shell/browser launcher.
+            if (
+                not isinstance(url, str)
+                or not url.startswith(RELEASES_URL_PREFIX)
+                or any(ch <= " " for ch in url)
+            ):
+                raise ToolError("invalid_payload", "URL not allowed")
+            webbrowser.open(url)
+
+        return self._envelope(run)

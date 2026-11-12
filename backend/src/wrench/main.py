@@ -1,6 +1,8 @@
 import ctypes
 import logging
 import os
+import sys
+import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -8,6 +10,7 @@ from typing import Any
 
 import webview
 
+from wrench._version import __version__
 from wrench.api import Api
 from wrench.core import paths
 from wrench.core.autostart import Autostart
@@ -15,6 +18,13 @@ from wrench.core.logging_setup import configure_logging
 from wrench.core.registry import ToolRegistry, discover_tools
 from wrench.core.settings import SettingsStore, WindowSettings, detect_system_language
 from wrench.core.single_instance import acquire, focus_existing_window
+from wrench.core.updater import (
+    Updater,
+    UrllibClient,
+    launch_installer_detached,
+    read_install_location,
+    update_supported,
+)
 from wrench.core.webview2 import find_free_port, is_webview2_installed
 from wrench.core.window_state import ScreenRect, fit_to_screens
 
@@ -45,7 +55,16 @@ def _screens() -> list[ScreenRect]:
 def _exposed(api: Api) -> list[Callable[..., Any]]:
     """The only Python callables reachable from JS. Passing `js_api=api` would let the page
     reach private members too: pywebview resolves dotted names with plain getattr."""
-    return [api.get_bootstrap, api.save_settings, api.set_autostart, api.tool_call]
+    return [
+        api.get_bootstrap,
+        api.save_settings,
+        api.set_autostart,
+        api.tool_call,
+        api.get_update_status,
+        api.check_for_updates,
+        api.install_update,
+        api.open_url,
+    ]
 
 
 def _message_box(text: str) -> None:
@@ -98,12 +117,20 @@ def _run() -> int:
     )
     autostart = Autostart()
     autostart.refresh_path()
+    updater = Updater(
+        UrllibClient(),
+        __version__,
+        update_supported(sys.executable, paths.is_frozen(), read_install_location),
+        Path(tempfile.gettempdir()) / "Wrench-update",
+        launch_installer_detached,
+    )
     api = Api(
         store,
         loaded.settings,
         registry,
         autostart,
         ["settings_recovered"] if loaded.recovered else [],
+        updater=updater,
     )
     logger.info("Starting Wrench (dev=%s, tools=%d)", dev, len(registry.manifests()))
 
@@ -135,6 +162,7 @@ def _run() -> int:
     )
     assert window is not None
     window.expose(*_exposed(api))
+    updater.set_close_handler(window.destroy)
 
     # Recent normal (neither maximized nor minimized) geometries, in logical pixels.
     # Windows moves/resizes the window just before the maximized/minimized event, so

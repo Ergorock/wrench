@@ -69,3 +69,11 @@ def test_save_is_atomic_no_tmp_left(tmp_path):
 
 def test_detect_system_language_never_raises():
     assert detect_system_language() in {"en", "fr"} or len(detect_system_language()) == 2
+
+
+def test_old_settings_without_updates(tmp_path):
+    p = tmp_path / "s.json"
+    p.write_text('{"language": "fr"}', encoding="utf-8")
+    r = SettingsStore(p, "en").load()
+    assert not r.recovered and r.settings.updates.auto_check is True
+    assert r.settings.updates.last_check is None

@@ -1,3 +1,5 @@
+import webbrowser
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -124,3 +126,68 @@ def test_bad_arguments_are_invalid_payload_warnings(
     r = buggy_api.tool_call("buggy", "takes_int", payload)  # type: ignore[arg-type]
     assert r["error"]["code"] == "invalid_payload"
     assert [rec.levelname for rec in caplog.records] == ["WARNING"]
+
+
+def test_update_methods_without_updater(api: Api) -> None:
+    assert api.check_for_updates()["error"]["code"] == "update_unsupported"
+    assert api.install_update()["error"]["code"] == "update_unsupported"
+    status = api.get_update_status()["data"]
+    assert status["supported"] is False and status["status"] == "idle"
+    assert status["info"] is None and status["progress"] == 0.0 and status["error_code"] is None
+
+
+def test_check_for_updates_sets_last_check(api_with_updater: Api) -> None:
+    assert api_with_updater._current().updates.last_check is None
+    r = api_with_updater.check_for_updates()
+    assert r["ok"] and r["data"]["status"] == "available"
+    assert api_with_updater._current().updates.last_check is not None
+    assert api_with_updater.get_update_status()["data"]["status"] == "available"
+
+
+def test_unsupported_check_does_not_set_last_check(tmp_path: Path, registry: ToolRegistry) -> None:
+    from conftest import FakeHttp, release_for
+
+    from wrench.core.updater import Updater
+
+    store = SettingsStore(tmp_path / "s.json", "en")
+    updater = Updater(FakeHttp(release_for(b"x")), "1.2.0", False, tmp_path, lambda p: None)
+    api = Api(
+        store,
+        store.load().settings,
+        registry,
+        Autostart(FakeBackend(), "python.exe", frozen=False),
+        [],
+        updater=updater,
+    )
+    assert api.check_for_updates()["error"]["code"] == "update_unsupported"
+    assert api._current().updates.last_check is None
+
+
+def test_save_settings_keeps_python_last_check(api: Api) -> None:
+    stamp = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    with api._lock:
+        api._settings = api._settings.model_copy(
+            update={"updates": api._settings.updates.model_copy(update={"last_check": stamp})}
+        )
+    sent = api._current().model_dump(mode="json")
+    sent["updates"] = {"auto_check": False, "last_check": None}
+    r = api.save_settings(sent)
+    assert r["ok"] and r["data"]["updates"]["auto_check"] is False
+    assert api._current().updates.last_check == stamp
+
+
+def test_open_url_restricted(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    opened: list[str] = []
+    monkeypatch.setattr(webbrowser, "open", opened.append)
+    good = "https://github.com/Ergorock/wrench/releases/tag/v1.0.0"
+    assert api.open_url(good)["ok"]
+    for bad in (
+        "https://evil.example/",
+        "http://github.com/Ergorock/wrench/",
+        "https://github.com/Ergorock/wrench",
+        "https://github.com/Ergorock/wrench/ x",
+        "https://github.com/Ergorock/wrench/\nx",
+        None,
+    ):
+        assert api.open_url(bad)["error"]["code"] == "invalid_payload"  # type: ignore[arg-type]
+    assert opened == [good]
