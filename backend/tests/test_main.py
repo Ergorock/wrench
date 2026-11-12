@@ -93,3 +93,26 @@ def test_webview_starts_with_dedicated_profile_and_free_port(
     assert started["http_port"] == 51234
     assert started["http_port"] != 42001
     assert started["private_mode"] is False
+
+
+def test_main_refreshes_the_autostart_path(
+    startup: dict[str, list[str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    refreshed: list[bool] = []
+
+    class FakeAutostart:
+        def is_available(self) -> bool:
+            return True
+
+        def is_enabled(self) -> bool:
+            return True
+
+        def refresh_path(self) -> None:
+            refreshed.append(True)
+
+    monkeypatch.setattr(wrench_main, "Autostart", FakeAutostart)
+    monkeypatch.setattr(wrench_main, "is_webview2_installed", lambda: False)
+
+    wrench_main.main()
+
+    assert refreshed == [True]

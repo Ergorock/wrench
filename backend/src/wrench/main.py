@@ -96,11 +96,13 @@ def _run() -> int:
         paths.tools_data_dir(),
         lambda: api._current().language,
     )
+    autostart = Autostart()
+    autostart.refresh_path()
     api = Api(
         store,
         loaded.settings,
         registry,
-        Autostart(),
+        autostart,
         ["settings_recovered"] if loaded.recovered else [],
     )
     logger.info("Starting Wrench (dev=%s, tools=%d)", dev, len(registry.manifests()))
