@@ -32,6 +32,21 @@
     "languages": { "fr": "Français", "en": "English" },
     "noTools": "No tools are installed yet."
   },
+  "updates": {
+    "available": "Wrench {version} is available.",
+    "install": "Update",
+    "notes": "Release notes",
+    "later": "Later",
+    "downloading": "Downloading… {percent}%",
+    "installing": "Installing…",
+    "retry": "Retry",
+    "sectionTitle": "Updates",
+    "currentVersion": "Installed version: {version}",
+    "autoCheck": "Automatically check for updates",
+    "checkNow": "Check now",
+    "upToDate": "Wrench is up to date.",
+    "unsupported": "Updates are not available in this installation."
+  },
   "warnings": {
     "settings_recovered": "The settings file was unreadable: it has been reset and a backup copy was kept."
   },
@@ -44,6 +59,12 @@
     "autostart_unavailable": "Autostart is not available.",
     "internal_error": "Internal application error.",
     "toolLoadFailed": "This tool could not be loaded.",
+    "update_network": "Could not reach the update server.",
+    "update_integrity": "The downloaded update file is invalid.",
+    "update_install_failed": "The update installation failed.",
+    "update_unsupported": "Updates are not available in this installation.",
+    "no_update": "No update to install.",
+    "open_failed": "Could not open the link.",
     "toolLoadRetry": "Retry"
   }
 }

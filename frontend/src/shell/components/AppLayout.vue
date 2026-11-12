@@ -5,6 +5,7 @@ import SettingsView from './SettingsView.vue'
 import Sidebar from './Sidebar.vue'
 import ToastHost from './ToastHost.vue'
 import ToolView from './ToolView.vue'
+import UpdateBanner from './UpdateBanner.vue'
 import WarningBanner from './WarningBanner.vue'
 
 const { view } = useShell()
@@ -14,6 +15,7 @@ const { view } = useShell()
   <div class="layout">
     <Sidebar />
     <main class="main">
+      <UpdateBanner />
       <WarningBanner />
       <div class="content">
         <HomeView v-if="view === 'home'" />
