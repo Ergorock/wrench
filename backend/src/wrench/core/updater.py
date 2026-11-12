@@ -320,7 +320,13 @@ class Updater:
         except UpdateError as e:
             error = e.code
             logger.warning("Update check failed: %s", e.message)
+        except Exception:
+            logger.exception("Unexpected error during the update check")
+            error = "update_network"
         with self._lock:
+            if self._status in ("downloading", "installing"):
+                # An install started while this check was in flight: leave it untouched.
+                return self._snapshot_locked()
             self._info = info
             self._progress = 0.0
             self._error_code = error
@@ -373,6 +379,7 @@ class Updater:
             return
         except Exception:
             logger.exception("Unexpected error while downloading the update")
+            path.unlink(missing_ok=True)
             self._set_error("update_network")
             return
         with self._lock:

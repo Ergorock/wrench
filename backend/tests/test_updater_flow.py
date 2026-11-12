@@ -214,11 +214,13 @@ def test_install_failed(tmp_path):
     def boom(p):
         raise OSError("nope")
 
-    u, _ = make(tmp_path, launch=boom)
+    closed: list[int] = []
+    u, _ = make(tmp_path, launch=boom, request_close=lambda: closed.append(1))
     u.check()
     u.start_install()
     u.wait(5)
     assert u.snapshot()["error_code"] == "update_install_failed"
+    assert closed == []
 
 
 def test_close_handler_and_missing_handler(tmp_path):
@@ -256,3 +258,50 @@ def test_launch_installer_detached_args(monkeypatch):
         subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     )
     assert kwargs["close_fds"] is True
+
+
+def test_inflight_check_does_not_defeat_double_start(tmp_path):
+    u, http = make(tmp_path, b"x", slow=True)
+    u.check()
+    entered, release = threading.Event(), threading.Event()
+    real = http.get_json
+
+    def gated(url: str) -> Any:
+        entered.set()
+        release.wait(5)
+        return real(url)
+
+    http.get_json = gated  # type: ignore[method-assign]
+    t = threading.Thread(target=u.check)
+    t.start()
+    assert entered.wait(5)
+    u.start_install()
+    assert http.started.wait(5)
+    release.set()
+    t.join(5)
+    s = u.snapshot()
+    assert s["status"] == "downloading" and s["info"] is not None
+    assert u.start_install()["status"] == "downloading"
+    http.gate.set()
+    u.wait(5)
+    assert http.download_calls == 1
+
+
+def test_check_unexpected_exception_sets_error(tmp_path):
+    u = Updater(FakeHttp(error=RuntimeError("boom")), "1.2.0", True, tmp_path, lambda p: None)
+    s = u.check()
+    assert s["status"] == "error" and s["error_code"] == "update_network"
+
+
+def test_unexpected_download_error_removes_partial_file(tmp_path):
+    u, http = make(tmp_path)
+
+    def boom(url: str, dest: Path, on_progress: Callable[[int, int], None]) -> None:
+        dest.write_bytes(b"partial")
+        raise RuntimeError("weird")
+
+    http.download = boom  # type: ignore[method-assign]
+    u.check()
+    u.start_install()
+    u.wait(5)
+    assert not (tmp_path / "Wrench-Setup-1.3.0.exe").exists()
