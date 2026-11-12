@@ -53,13 +53,15 @@ L'icône `backend/assets/wrench.ico` est provisoire. Elle se régénère avec `u
 
 ## Installateur
 
-Prérequis : [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`).
+Prérequis : [NSIS 3](https://nsis.sourceforge.io/) (`winget install NSIS.NSIS`). À défaut, le script utilise le `makensis` du cache d'electron-builder (`%LOCALAPPDATA%\electron-builder\Cache\nsis-*`) s'il existe.
 
 ```powershell
 scripts/build-installer.ps1 [-SkipAppBuild]
 ```
 
-Le script lance `scripts/build.ps1` (sauf avec `-SkipAppBuild`, qui réutilise `dist/Wrench/`), lit la version dans `backend/src/wrench/_version.py`, puis compile `installer/wrench.iss`. Résultat : `installer/Output/Wrench-Setup-<version>.exe`, qui s'installe pour l'utilisateur courant, sans droits administrateur.
+Le script lance `scripts/build.ps1` (sauf avec `-SkipAppBuild`, qui réutilise `dist/Wrench/`), lit la version dans `backend/src/wrench/_version.py`, puis compile `installer/wrench.nsi` avec `makensis`. Résultat : `installer/Output/Wrench-Setup-<version>.exe`, qui s'installe pour l'utilisateur courant, sans droits administrateur.
+
+Options de l'installateur : `/S` (installation silencieuse) et `/RELAUNCH` (relance Wrench à la fin, seulement avec `/S` ; utilisée par les mises à jour). En mode silencieux, si Wrench est encore ouvert après 30 s, l'installateur s'arrête avec le code 2 sans rien modifier. Désinstallation silencieuse : `"%LOCALAPPDATA%\Programs\Wrench\uninstall.exe" /S` (les paramètres et données de `%APPDATA%\Wrench` sont alors conservés).
 
 L'installateur n'est pas signé : Windows SmartScreen affichera un avertissement au premier lancement (« Informations complémentaires », puis « Exécuter quand même »).
 
