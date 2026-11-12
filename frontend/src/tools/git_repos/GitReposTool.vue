@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Download, FolderPlus, RefreshCw, Settings } from '@lucide/vue'
-import { pickFolder } from '../../bridge/client'
+import { Download, FolderPlus, LoaderCircle, RefreshCw, Settings } from '@lucide/vue'
+import { pickFolder, toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
 import { toastError } from '../../shell/toasts'
 import CommitDialog from './CommitDialog.vue'
@@ -24,6 +24,8 @@ const query = ref('')
 const onlyAttention = ref(false)
 const committing = ref<RepoView | null>(null)
 const now = ref(new Date())
+const loading = ref(false)
+let pollFailed = false
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let unmounted = false
 
@@ -36,11 +38,21 @@ const groups = computed(() => {
 const hasRepos = computed(() => (state.value?.repos.length ?? 0) > 0)
 
 // get_state is polled every second while an operation runs, and not at all otherwise.
+// The poll bypasses useTool so that a failing get_state shows one toast per failure streak,
+// not one per second.
 function schedulePoll(): void {
   if (pollTimer !== null || unmounted || !state.value?.repos.some((r) => r.running)) return
   pollTimer = setTimeout(async () => {
     pollTimer = null
-    await run(() => tool.call<RepoState>('get_state'))
+    try {
+      state.value = await toolCall<RepoState>('git_repos', 'get_state')
+      pollFailed = false
+    } catch (err) {
+      if (!pollFailed) toastError(err, 'git_repos')
+      pollFailed = true
+    }
+    now.value = new Date()
+    schedulePoll()
   }, POLL_MS)
 }
 
@@ -63,8 +75,11 @@ async function open(): Promise<void> {
   } catch {
     return
   }
+  loading.value = true
   await act('rescan')
-  if (state.value?.git_available && hasRepos.value) await act('fetch_all')
+  loading.value = false
+  // The automatic fetch never opens a credential window (auth_required on the row instead).
+  if (state.value?.git_available && hasRepos.value) await act('fetch_all', { auto: true })
 }
 
 async function saveFolders(roots: string[], maxDepth: number): Promise<void> {
@@ -87,7 +102,7 @@ async function addFirstFolder(): Promise<void> {
   }
   if (folder === null || config.value === null) return
   await saveFolders([folder], config.value.max_depth)
-  if (state.value?.git_available && hasRepos.value) await act('fetch_all')
+  if (state.value?.git_available && hasRepos.value) await act('fetch_all', { auto: true })
 }
 
 async function commit(message: string, push: boolean): Promise<void> {
@@ -158,7 +173,11 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <div v-if="state && !hasRepos" class="empty">
+        <p v-if="loading" class="empty loading">
+          <LoaderCircle :size="16" class="spin" aria-hidden="true" />
+          {{ t(`${PREFIX}empty.loading`) }}
+        </p>
+        <div v-else-if="state && !hasRepos" class="empty">
           <p>{{ t(`${PREFIX}empty.noRepos`) }}</p>
           <button type="button" @click="view = 'folders'">{{ t(`${PREFIX}empty.openFolders`) }}</button>
         </div>
@@ -274,6 +293,19 @@ button.primary {
 }
 .empty {
   color: var(--text-muted);
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .notice {
   margin-bottom: 16px;

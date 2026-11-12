@@ -12,8 +12,17 @@ _AUTH_MARKERS = (
     "could not read Username",
     "terminal prompts disabled",
     "Permission denied (publickey)",
+    "cannot prompt because user interactivity has been disabled",  # GCM_INTERACTIVE=never
 )
-_DIVERGED_MARKERS = ("Not possible to fast-forward", "diverging", "divergent")
+_DIVERGED_MARKERS = (
+    "Not possible to fast-forward",
+    "diverging",
+    "divergent",
+    # push refused because the remote has commits we do not have
+    "[rejected]",
+    "non-fast-forward",
+    "fetch first",
+)
 
 
 class GitOpError(Exception):
@@ -25,7 +34,8 @@ class GitOpError(Exception):
 
 def classify_error(stderr: str) -> str:
     """Code of a failed git command, from its error output."""
-    if any(marker in stderr for marker in _AUTH_MARKERS):
+    lowered = stderr.lower()
+    if any(marker.lower() in lowered for marker in _AUTH_MARKERS):
         return "auth_required"
     if "not a git repository" in stderr:
         return "not_a_repo"
@@ -34,10 +44,10 @@ def classify_error(stderr: str) -> str:
     return "git_failed"
 
 
-def run_or_raise(repo: Path, args: Sequence[str], timeout: float) -> str:
+def run_or_raise(repo: Path, args: Sequence[str], timeout: float, interactive: bool = True) -> str:
     """Stdout of a successful git command; GitOpError otherwise."""
     try:
-        result = run_git(repo, args, timeout)
+        result = run_git(repo, args, timeout, interactive=interactive)
     except GitTimeout as exc:
         raise GitOpError("timeout", str(exc)) from exc
     if result.code != 0:

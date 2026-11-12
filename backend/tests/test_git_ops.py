@@ -143,6 +143,9 @@ def test_missing_repo_is_not_a_repo(tmp_path: Path) -> None:
         ("git@x: Permission denied (publickey).", "auth_required"),
         ("fatal: not a git repository (or any of the parent directories): .git", "not_a_repo"),
         ("fatal: Not possible to fast-forward, aborting.", "diverged"),
+        ("fatal: Cannot prompt because user interactivity has been disabled.", "auth_required"),
+        (" ! [rejected]        main -> main (fetch first)", "diverged"),
+        (" ! [rejected]        main -> main (non-fast-forward)", "diverged"),
         ("hint: You have divergent branches", "diverged"),
         ("boom", "git_failed"),
     ],
@@ -165,3 +168,15 @@ def test_commit_refuses_conflicts_without_operation(tmp_path: Path) -> None:
         commit_all(r, "m")
     assert e.value.code == "in_progress"
     assert "<<<<<<<" not in git(r, "show", "HEAD:README.md")
+
+
+def test_push_rejected_when_diverged(tmp_path: Path) -> None:
+    rem = make_remote(tmp_path)
+    a = make_clone(rem, tmp_path / "a")
+    b = make_clone(rem, tmp_path / "b")
+    commit_file(a, "f", "1", "x")
+    git(a, "push")
+    commit_file(b, "g", "2", "y")
+    with pytest.raises(GitOpError) as e:
+        push(b)
+    assert e.value.code == "diverged"

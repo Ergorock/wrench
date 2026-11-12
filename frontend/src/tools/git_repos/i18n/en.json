@@ -69,7 +69,8 @@
     "noGit": "git was not found on this computer. Install it, for example with the following command, then restart Wrench:",
     "noRepos": "No git repository was found in your folders.",
     "openFolders": "Edit the folders",
-    "noMatch": "No repository matches."
+    "noMatch": "No repository matches.",
+    "loading": "Looking for repositories…"
   },
   "relative": {
     "never": "never",
@@ -80,7 +81,7 @@
   },
   "errors": {
     "not_a_repo": "This folder is no longer a git repository.",
-    "diverged": "The local and remote branches have diverged: a fast-forward pull is not possible.",
+    "diverged": "The local and remote branches have diverged: neither a fast-forward pull nor a push is possible.",
     "nothing_to_commit": "There is nothing to commit.",
     "empty_message": "The commit message is required.",
     "detached_head": "HEAD is detached: switch to a branch first.",
@@ -90,6 +91,7 @@
     "timeout": "The git operation took too long.",
     "git_failed": "The git command failed.",
     "unknown_repo": "Unknown repository: refresh the list.",
-    "git_not_found": "git was not found on this computer."
+    "git_not_found": "git was not found on this computer.",
+    "busy": "An operation is already running on this repository."
   }
 }

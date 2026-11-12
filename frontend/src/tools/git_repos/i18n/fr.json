@@ -69,7 +69,8 @@
     "noGit": "git est introuvable sur ce poste. Installez-le, par exemple avec la commande suivante, puis relancez Wrench :",
     "noRepos": "Aucun dépôt git n’a été trouvé dans vos dossiers.",
     "openFolders": "Modifier les dossiers",
-    "noMatch": "Aucun dépôt ne correspond."
+    "noMatch": "Aucun dépôt ne correspond.",
+    "loading": "Recherche des dépôts…"
   },
   "relative": {
     "never": "jamais",
@@ -80,7 +81,7 @@
   },
   "errors": {
     "not_a_repo": "Ce dossier n’est plus un dépôt git.",
-    "diverged": "Les branches locale et distante ont divergé : impossible de tirer en avance rapide.",
+    "diverged": "Les branches locale et distante ont divergé : ni tirage en avance rapide ni envoi possible.",
     "nothing_to_commit": "Il n’y a rien à commiter.",
     "empty_message": "Le message du commit est obligatoire.",
     "detached_head": "La tête est détachée : passez sur une branche d’abord.",
@@ -90,6 +91,7 @@
     "timeout": "L’opération git a pris trop de temps.",
     "git_failed": "La commande git a échoué.",
     "unknown_repo": "Ce dépôt est inconnu : actualisez la liste.",
-    "git_not_found": "git est introuvable sur ce poste."
+    "git_not_found": "git est introuvable sur ce poste.",
+    "busy": "Une opération est déjà en cours sur ce dépôt."
   }
 }

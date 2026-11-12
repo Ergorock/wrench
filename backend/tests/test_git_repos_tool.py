@@ -201,3 +201,42 @@ def test_deleted_repo_marked_not_a_repo(ctx: ToolContext, tmp_path: Path) -> Non
     repos = {x["name"]: x for x in svc.invoke("get_state", {})["repos"]}
     assert repos["a"]["error"]["code"] == "not_a_repo" and repos["b"]["error"] is None
     assert repos["a"]["branch"] == "main"  # last known state is kept
+
+
+def test_fetch_all_auto_is_not_interactive(
+    ctx: ToolContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "Dev"
+    r = make_clone(make_remote(tmp_path), root / "p")
+    svc = _configured(ctx, root)
+    seen: list[tuple[str, bool]] = []
+
+    def record(repo: Path, interactive: bool = True) -> None:
+        seen.append((repo.name, interactive))
+
+    monkeypatch.setattr(ops, "fetch", record)
+    svc.invoke("fetch_all", {"auto": True})
+    assert svc._jobs.wait_idle(30)
+    svc.invoke("fetch_all", {})
+    assert svc._jobs.wait_idle(30)
+    svc.invoke("fetch", {"path": str(r)})
+    assert svc._jobs.wait_idle(30)
+    assert seen == [("p", False), ("p", True), ("p", True)]
+
+
+def test_commit_while_busy_is_refused(
+    ctx: ToolContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "Dev"
+    r = make_clone(make_remote(tmp_path), root / "p")
+    (r / "n.txt").write_text("x", "utf-8")
+    svc = _configured(ctx, root)
+    gate = threading.Event()
+    monkeypatch.setattr(ops, "fetch", lambda repo, interactive=True: gate.wait(10))
+    svc.invoke("fetch", {"path": str(r)})
+    with pytest.raises(ToolError) as e:
+        svc.invoke("commit", {"path": str(r), "message": "m"})
+    gate.set()
+    assert svc._jobs.wait_idle(30)
+    assert e.value.code == "busy"
+    assert svc.invoke("get_state", {})["repos"][0]["untracked"] == 1

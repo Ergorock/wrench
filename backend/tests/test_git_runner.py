@@ -68,3 +68,16 @@ def test_run_git_timeout_kills_grandchildren_holding_the_pipes(tmp_path: Path) -
     with pytest.raises(GitTimeout):
         run_git(tmp_path, ["fetch"], 1, git=git)
     assert time.monotonic() - t0 < 10
+
+
+@windows_only
+@pytest.mark.parametrize("interactive,expected", [(True, "unset"), (False, "never")])
+def test_run_git_non_interactive_disables_credential_prompts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, interactive: bool, expected: str
+) -> None:
+    monkeypatch.delenv("GCM_INTERACTIVE", raising=False)
+    git = _fake_git(
+        tmp_path, "if defined GCM_INTERACTIVE (echo %GCM_INTERACTIVE%) else (echo unset)"
+    )
+    result = run_git(tmp_path, ["fetch"], 5, git=git, interactive=interactive)
+    assert result.stdout.strip() == expected

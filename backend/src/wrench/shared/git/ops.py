@@ -21,9 +21,10 @@ def _require_branch(status: RepoStatus) -> None:
         raise GitOpError("in_progress", f"A {status.operation} is in progress")
 
 
-def fetch(repo: Path) -> None:
+def fetch(repo: Path, interactive: bool = True) -> None:
+    """`interactive=False` for automatic fetches: no credential prompt, auth_required."""
     _require_remote(read_status(repo))
-    run_or_raise(repo, ["fetch", "--prune"], NETWORK_TIMEOUT)
+    run_or_raise(repo, ["fetch", "--prune"], NETWORK_TIMEOUT, interactive=interactive)
 
 
 def pull(repo: Path) -> None:

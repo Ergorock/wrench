@@ -104,7 +104,7 @@ function flatKeys(o: Record<string, unknown>, prefix = ''): string[] {
 describe('git_repos i18n', () => {
   it('fr et en ont les mêmes clés', () => expect(flatKeys(frTool).sort()).toEqual(flatKeys(enTool).sort()))
 
-  it('traduit les 12 codes d’erreur', () => {
+  it('traduit les 13 codes d’erreur', () => {
     const codes = [
       'not_a_repo',
       'diverged',
@@ -118,6 +118,7 @@ describe('git_repos i18n', () => {
       'git_failed',
       'unknown_repo',
       'git_not_found',
+      'busy',
     ]
     for (const c of codes) expect(flatKeys(frTool)).toContain(`errors.${c}`)
   })

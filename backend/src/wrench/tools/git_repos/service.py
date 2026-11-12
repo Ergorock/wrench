@@ -164,7 +164,7 @@ class GitReposService(ToolService):
                 repo.status = status
             repo.error = error
 
-    def _submit(self, repo: _Repo, op: str, fn: Callable[[], None]) -> None:
+    def _submit(self, repo: _Repo, op: str, fn: Callable[[], None]) -> bool:
         key = _key(repo.path)
 
         def work() -> None:
@@ -173,7 +173,7 @@ class GitReposService(ToolService):
             finally:
                 self._refresh(key, repo.path)
 
-        self._jobs.submit(key, op, work)
+        return self._jobs.submit(key, op, work)
 
     # --- actions -------------------------------------------------------------------
 
@@ -226,13 +226,16 @@ class GitReposService(ToolService):
         return self._state()
 
     @action
-    def fetch_all(self) -> State:
+    def fetch_all(self, auto: bool = False) -> State:
+        """`auto`: the fetch made when the tool opens, without credential prompts."""
         self._require_git()
         with self._lock:
             repos = list(self._repos.values())
         for repo in repos:
             if repo.status.remote_url is not None:
-                self._submit(repo, "fetch", functools.partial(ops.fetch, repo.path))
+                self._submit(
+                    repo, "fetch", functools.partial(ops.fetch, repo.path, interactive=not auto)
+                )
         return self._state()
 
     @action
@@ -268,7 +271,9 @@ class GitReposService(ToolService):
             if push:
                 ops.push(repo.path)
 
-        self._submit(repo, "commit", work)
+        if not self._submit(repo, "commit", work):
+            # Unlike a repeated fetch/pull/push, dropping it would lose the typed message.
+            raise ToolError("busy", "An operation is already running on this repository")
         return self._state()
 
     @action

@@ -59,7 +59,15 @@ def find_git(candidates: Sequence[str] | None = None) -> str:
     return _first_existing(candidates)
 
 
-def run_git(repo: Path, args: Sequence[str], timeout: float, git: str | None = None) -> GitResult:
+def run_git(
+    repo: Path,
+    args: Sequence[str],
+    timeout: float,
+    git: str | None = None,
+    interactive: bool = True,
+) -> GitResult:
+    """Runs git in `repo`. With `interactive=False`, the Git Credential Manager fails
+    instead of opening a sign-in window (for operations nobody asked for explicitly)."""
     env = {
         **os.environ,
         "GIT_TERMINAL_PROMPT": "0",
@@ -67,6 +75,8 @@ def run_git(repo: Path, args: Sequence[str], timeout: float, git: str | None = N
         "LANG": "C",
         "GIT_OPTIONAL_LOCKS": "0",
     }
+    if not interactive:
+        env["GCM_INTERACTIVE"] = "never"
     cmd = [git or find_git(), "-C", str(repo), *args]
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     with subprocess.Popen(
