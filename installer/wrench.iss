@@ -5,6 +5,8 @@
   #error AppVersion is not defined. Run: iscc /DAppVersion=<version> installer\wrench.iss
 #endif
 
+#define AppMutexName "Local\WrenchSingleInstance"
+
 [Setup]
 AppId={{DF1A711B-045E-48E1-A43E-DCBD79719B83}
 AppName=Wrench
@@ -22,7 +24,7 @@ SetupIconFile=..\backend\assets\wrench.ico
 UninstallDisplayIcon={app}\Wrench.exe
 Compression=lzma2
 SolidCompression=yes
-AppMutex=Local\WrenchSingleInstance
+AppMutex={#AppMutexName}
 ShowLanguageDialog=no
 #ifexist "..\LICENSE"
 LicenseFile=..\LICENSE
@@ -54,6 +56,36 @@ french.DeleteUserData=Supprimer aussi vos paramètres et données (%1) ?
 english.DeleteUserData=Also delete your settings and data (%1)?
 
 [Code]
+const
+  MutexWaitMaxMs = 30000;
+  MutexWaitStepMs = 250;
+
+// Silent update: the updater starts the setup then quits Wrench, so the
+// AppMutex check (which aborts silently, without retry) can run too early.
+// Wait for Wrench to exit first; the built-in AppMutex check still has the
+// final say.
+function InitializeSetup: Boolean;
+var
+  Waited: Integer;
+begin
+  Result := True;
+  if not WizardSilent then
+    Exit;
+  if not CheckForMutexes('{#AppMutexName}') then
+    Exit;
+  Log('Wrench is running; waiting for it to exit (silent install).');
+  Waited := 0;
+  while CheckForMutexes('{#AppMutexName}') and (Waited < MutexWaitMaxMs) do
+  begin
+    Sleep(MutexWaitStepMs);
+    Waited := Waited + MutexWaitStepMs;
+  end;
+  if CheckForMutexes('{#AppMutexName}') then
+    Log('Wrench still running after wait; AppMutex check will decide.')
+  else
+    Log(Format('Wrench exited after %d ms.', [Waited]));
+end;
+
 function ShouldRelaunch: Boolean;
 var
   I: Integer;
