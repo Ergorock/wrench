@@ -97,8 +97,7 @@
         { "id": "high_contrast", "keys": ["Alt", "Shift", "PrtSc"] },
         { "id": "on_screen_keyboard", "keys": ["Win", "Ctrl", "O"] },
         { "id": "voice_typing", "keys": ["Win", "H"] },
-        { "id": "voice_typing_focus", "keys": ["Win", "Alt", "H"] },
-        { "id": "speech_recognition", "keys": ["Win", "Ctrl", "S"] }
+        { "id": "voice_typing_focus", "keys": ["Win", "Alt", "H"] }
       ]
     },
     {

@@ -115,12 +115,11 @@
     "on_screen_keyboard": "Activer le clavier visuel",
     "voice_typing": "Ouvrir la dictée vocale",
     "voice_typing_focus": "Placer le focus sur la boîte de dialogue de dictée vocale",
-    "speech_recognition": "Activer la reconnaissance vocale de Windows",
 
     "emoji_panel": "Ouvrir le panneau des emoji",
     "next_input_language": "Passer à la langue de saisie ou à la disposition de clavier suivante",
     "previous_input_language": "Revenir à la langue de saisie ou à la disposition de clavier précédente",
-    "paste_plain_text": "Coller sans mise en forme",
+    "paste_plain_text": "Coller sans mise en forme (selon l’application)",
     "undo": "Annuler la dernière action",
     "redo": "Rétablir l’action annulée",
     "find_text": "Rechercher du texte",

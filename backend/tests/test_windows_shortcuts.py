@@ -35,8 +35,15 @@ def svc(ctx: ToolContext) -> WindowsShortcutsService:
 
 def test_catalog_shape(svc):
     cat = svc.invoke("get_catalog", {})
-    assert [g["id"] for g in cat["groups"]] == ["general", "windows_snap", "virtual_desktops",
-        "explorer", "capture", "accessibility", "typing"]
+    assert [g["id"] for g in cat["groups"]] == [
+        "general",
+        "windows_snap",
+        "virtual_desktops",
+        "explorer",
+        "capture",
+        "accessibility",
+        "typing",
+    ]
     n = sum(len(g["shortcuts"]) for g in cat["groups"])
     assert 60 <= n <= 80
     ids = [s["id"] for g in cat["groups"] for s in g["shortcuts"]]

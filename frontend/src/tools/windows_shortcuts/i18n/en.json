@@ -115,12 +115,11 @@
     "on_screen_keyboard": "Turn on the On-Screen Keyboard",
     "voice_typing": "Open voice typing",
     "voice_typing_focus": "Move keyboard focus to the voice typing dialog",
-    "speech_recognition": "Turn on Windows Speech Recognition",
 
     "emoji_panel": "Open the emoji panel",
     "next_input_language": "Switch forward through input languages and keyboard layouts",
     "previous_input_language": "Switch backward through input languages and keyboard layouts",
-    "paste_plain_text": "Paste as plain text",
+    "paste_plain_text": "Paste as plain text (depends on the app)",
     "undo": "Undo the last action",
     "redo": "Redo the undone action",
     "find_text": "Find text",
