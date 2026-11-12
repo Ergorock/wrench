@@ -167,6 +167,85 @@ describe('ShortcutsTool', () => {
     expect(toasts.value.map((t) => t.message)).toEqual([enTool.errors.unknown_shortcut])
   })
 
+  describe('étoiles cliquées coup sur coup', () => {
+    type Pending = { shortcutId: string; resolve: (res: unknown) => void }
+    let pending: Pending[]
+
+    // set_favorite calls wait until the test resolves them by hand.
+    function installManualApi(): void {
+      pending = []
+      ;(window as unknown as { pywebview: unknown }).pywebview = {
+        api: {
+          tool_call: (_tool: string, action: string, payload?: Record<string, unknown>) =>
+            action === 'get_catalog'
+              ? Promise.resolve({ ok: true, data: catalog })
+              : new Promise((resolve) =>
+                  pending.push({ shortcutId: payload?.shortcut_id as string, resolve }),
+                ),
+        },
+      }
+    }
+
+    const ok = (data: string[]) => ({ ok: true, data })
+    const fail = { ok: false, error: { code: 'internal_error', message: 'x' } }
+    const favoriteHeadings = (): number =>
+      [...host.querySelectorAll('h2')].filter((h) => h.textContent?.trim() === enTool.favorites)
+        .length
+    const isFavorite = (id: string): boolean =>
+      host.querySelectorAll(`[data-shortcut="${id}"]`).length === 2
+
+    it('deux échecs successifs ne laissent aucun favori fantôme', async () => {
+      installManualApi()
+      await mountTool()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_left"] button')!.click()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_right"] button')!.click()
+      await nextTick()
+      expect(isFavorite('snap_left') && isFavorite('snap_right')).toBe(true)
+
+      pending[0].resolve(fail)
+      await flush()
+      expect(isFavorite('snap_left')).toBe(false)
+      expect(isFavorite('snap_right')).toBe(true) // still waiting for its answer
+
+      pending[1].resolve(fail)
+      await flush()
+      expect(favoriteHeadings()).toBe(0)
+      expect(toasts.value).toHaveLength(2)
+    })
+
+    it('garde le second favori affiché quand le premier est confirmé, sans clignotement', async () => {
+      installManualApi()
+      await mountTool()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_left"] button')!.click()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_right"] button')!.click()
+      await nextTick()
+
+      pending[0].resolve(ok(['snap_left']))
+      await flush()
+      expect(isFavorite('snap_left')).toBe(true)
+      expect(isFavorite('snap_right')).toBe(true)
+
+      pending[1].resolve(ok(['snap_left', 'snap_right']))
+      await flush()
+      expect(isFavorite('snap_left') && isFavorite('snap_right')).toBe(true)
+    })
+
+    it('envoie les appels set_favorite l’un après l’autre, dans l’ordre des clics', async () => {
+      installManualApi()
+      await mountTool()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_left"] button')!.click()
+      host.querySelector<HTMLButtonElement>('[data-shortcut="snap_right"] button')!.click()
+      await flush()
+      expect(pending.map((p) => p.shortcutId)).toEqual(['snap_left'])
+
+      pending[0].resolve(ok(['snap_left']))
+      await flush()
+      expect(pending.map((p) => p.shortcutId)).toEqual(['snap_left', 'snap_right'])
+      pending[1].resolve(ok(['snap_left', 'snap_right']))
+      await flush()
+    })
+  })
+
   it('Ctrl+F redonne le focus à la recherche et sélectionne son texte', async () => {
     await mountTool()
     await type('win')

@@ -173,11 +173,15 @@ Dans `ShortcutsTool.vue`, ces appels sont faits dans des fonctions `async` (`loa
 
 ```ts
 try {
-  favorites.value = await tool.call<string[]>('set_favorite', { shortcut_id: id, favorite: wanted })
+  confirmed.value = await tool.call<string[]>('set_favorite', { shortcut_id: id, favorite: wanted })
 } catch {
-  favorites.value = previous // useTool a déjà affiché le toast
+  // useTool a déjà affiché le toast ; l'opération en attente est retirée dans le finally
+} finally {
+  pendingToggles.value = pendingToggles.value.filter((p) => p.token !== op.token)
 }
 ```
+
+Pour une mise à jour optimiste, ne mémorisez pas « l'état précédent » pour y revenir en cas d'échec : deux clics rapprochés se marcheraient dessus. `ShortcutsTool.vue` garde plutôt l'état confirmé par le backend (`confirmed`) et la liste des opérations en attente (`pendingToggles`) ; l'état affiché (`favorites`) est calculé en appliquant les opérations en attente à l'état confirmé, et les appels sont envoyés l'un après l'autre.
 
 `pushToast(message, 'info')` reste utile pour un message d'information qui ne vient pas d'une erreur d'action.
 

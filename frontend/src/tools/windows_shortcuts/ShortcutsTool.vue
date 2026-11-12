@@ -13,7 +13,23 @@ const { t, te, locale } = useI18n()
 const tool = useTool('windows_shortcuts')
 
 const catalog = ref<Catalog | null>(null)
-const favorites = ref<string[]>([])
+// Favorites confirmed by the backend, plus the toggles still waiting for their answer. What is
+// displayed is `confirmed` with the pending toggles applied on top, so a failed toggle disappears
+// by itself without touching the others.
+interface PendingToggle {
+  token: number
+  id: string
+  wanted: boolean
+}
+const confirmed = ref<string[]>([])
+const pendingToggles = ref<PendingToggle[]>([])
+const favorites = computed<string[]>(() =>
+  pendingToggles.value.reduce(
+    (acc, op) =>
+      op.wanted ? (acc.includes(op.id) ? acc : [...acc, op.id]) : acc.filter((f) => f !== op.id),
+    confirmed.value,
+  ),
+)
 const query = ref('')
 const searchInput = ref<HTMLInputElement | null>(null)
 
@@ -83,22 +99,33 @@ async function load(): Promise<void> {
   try {
     const data = await tool.call<Catalog>('get_catalog')
     catalog.value = data
-    favorites.value = data.favorites
+    confirmed.value = data.favorites
   } catch {
     // useTool has already shown the error toast.
   }
 }
 
-async function toggleFavorite(id: string): Promise<void> {
-  const previous = favorites.value
-  const wanted = !previous.includes(id)
-  favorites.value = wanted ? [...previous, id] : previous.filter((f) => f !== id)
-  try {
-    favorites.value = await tool.call<string[]>('set_favorite', { shortcut_id: id, favorite: wanted })
-  } catch {
-    // Roll back. useTool has already shown the error toast: no second one here.
-    favorites.value = previous
-  }
+// set_favorite calls are sent one after the other, in the order of the clicks.
+let queue: Promise<void> = Promise.resolve()
+let nextToken = 0
+
+function toggleFavorite(id: string): Promise<void> {
+  const op: PendingToggle = { token: nextToken++, id, wanted: !favorites.value.includes(id) }
+  pendingToggles.value = [...pendingToggles.value, op]
+  queue = queue.then(async () => {
+    try {
+      confirmed.value = await tool.call<string[]>('set_favorite', {
+        shortcut_id: op.id,
+        favorite: op.wanted,
+      })
+    } catch {
+      // Nothing to roll back by hand: the toggle leaves `pendingToggles` below.
+      // useTool has already shown the error toast: no second one here.
+    } finally {
+      pendingToggles.value = pendingToggles.value.filter((p) => p.token !== op.token)
+    }
+  })
+  return queue
 }
 
 function focusSearch(): void {
