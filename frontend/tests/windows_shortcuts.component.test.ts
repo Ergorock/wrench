@@ -143,6 +143,8 @@ describe('ShortcutsTool', () => {
     await mountTool()
     const star = host.querySelector<HTMLButtonElement>('[data-shortcut="snap_left"] button')!
     expect(star.getAttribute('aria-label')).toBe(enTool.pin)
+    // Label that changes (pin/unpin) XOR toggle state (aria-pressed): never both.
+    expect(star.hasAttribute('aria-pressed')).toBe(false)
     star.click()
     await nextTick()
     expect(host.querySelector('h2')?.textContent?.trim()).toBe(enTool.favorites)

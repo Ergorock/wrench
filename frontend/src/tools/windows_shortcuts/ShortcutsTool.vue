@@ -187,7 +187,6 @@ onUnmounted(() => {
             type="button"
             class="star"
             :class="{ on: favorites.includes(row.entry.id) }"
-            :aria-pressed="favorites.includes(row.entry.id)"
             :aria-label="t(`${PREFIX}${favorites.includes(row.entry.id) ? 'unpin' : 'pin'}`)"
             :title="t(`${PREFIX}${favorites.includes(row.entry.id) ? 'unpin' : 'pin'}`)"
             @click="toggleFavorite(row.entry.id)"
