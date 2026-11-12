@@ -11,7 +11,7 @@
   },
   "badges": {
     "ahead": "↑{n}",
-    "aheadTitle": "{n} commit(s) to push",
+    "aheadTitle": "{n} commit(s) to push. Click to see the history.",
     "behind": "↓{n}",
     "behindTitle": "{n} commit(s) to pull",
     "changes": "● {n}",
@@ -23,12 +23,25 @@
     "unpublished": "unpublished branch",
     "upToDate": "✓ Up to date",
     "fetched": "Fetched {when}",
-    "host": {
-      "github": "GitHub",
-      "gitea": "Gitea",
-      "other": "Other host"
+    "clearError": "Clear the error",
+    "hostTitle": {
+      "github": "GitHub repository",
+      "gitea": "Gitea repository",
+      "other": "Remote git repository"
     },
-    "clearError": "Clear the error"
+    "hostTitleUrl": "{label} — {url}",
+    "branchTitle": {
+      "tracking": "Branch {branch}, tracks {upstream}. Click to see the branches.",
+      "untracked": "Branch {branch}, no tracked branch. Click to see the branches.",
+      "detached": "Detached HEAD: no branch is checked out. Click to see the branches."
+    },
+    "conflictTitle": "Some files are in conflict: resolve them with git before committing.",
+    "operationTitle": "A {op} is in progress in this repository: finish or abort it with git.",
+    "detachedTitle": "No branch is checked out: pull, push and commit are disabled.",
+    "noRemoteTitle": "This repository has no remote: nothing to fetch or push.",
+    "unpublishedTitle": "This branch does not exist on the remote yet: “Push” will publish it.",
+    "upToDateTitle": "Nothing to commit, push or pull.",
+    "errorTitle": "The last operation failed. git said: {message}"
   },
   "actions": {
     "fetch": "Fetch",
@@ -40,7 +53,9 @@
       "pull": "Pulling…",
       "push": "Pushing…",
       "commit": "Committing…"
-    }
+    },
+    "history": "History",
+    "historyTitle": "See the commit history"
   },
   "commit": {
     "title": "Commit {name}",
@@ -92,6 +107,37 @@
     "git_failed": "The git command failed.",
     "unknown_repo": "Unknown repository: refresh the list.",
     "git_not_found": "git was not found on this computer.",
-    "busy": "An operation is already running on this repository."
+    "busy": "An operation is already running on this repository.",
+    "unknown_ref": "This branch no longer exists: refresh the list."
+  },
+  "dialog": {
+    "close": "Close",
+    "loading": "Loading…"
+  },
+  "branches": {
+    "title": "Branches of {name}",
+    "main": "Main branch: {main}",
+    "noMain": "No main branch (main, master or origin/HEAD): merges are not shown.",
+    "local": "Local ({n})",
+    "remote": "Remote ({n})",
+    "current": "current",
+    "isMain": "main",
+    "merged": "✓ merged",
+    "mergedTitle": "All its commits are in {main}.",
+    "notInMain": "+{n} commit | +{n} commits",
+    "notInMainTitle": "{n} commit(s) not in {main}",
+    "aheadTitle": "{n} commit(s) ahead of {upstream}",
+    "behindTitle": "{n} commit(s) behind {upstream}",
+    "lastCommit": "Last commit: {when}",
+    "open": "See the commits of {name}",
+    "empty": "No branches."
+  },
+  "history": {
+    "title": "History of {name}",
+    "current": "current branch",
+    "detached": "detached HEAD",
+    "unpushedTitle": "Not pushed to the tracked branch yet",
+    "more": "Show more",
+    "empty": "No commits."
   }
 }

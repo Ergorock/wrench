@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GitBranch, GitFork, LoaderCircle, X } from '@lucide/vue'
-import { availableActions, changeCount, isUnpublished, needsAttention, relativeTime } from './logic'
+import { GitBranch, GitFork, History, LoaderCircle, X } from '@lucide/vue'
+import { availableActions, branchTitle, changeCount, hostTitle, isUnpublished, needsAttention, relativeTime } from './logic'
 import type { RepoView } from './types'
 
 const PREFIX = 'tools.git_repos.'
@@ -14,6 +14,8 @@ const emit = defineEmits<{
   push: []
   commit: []
   clearError: []
+  branches: []
+  history: []
 }>()
 
 const { t, te } = useI18n()
@@ -24,6 +26,7 @@ const actions = computed(() => availableActions(props.repo))
 const changes = computed(() => changeCount(props.repo))
 // GitHub has no Lucide icon (brand icons were removed): GitBranch stands for it.
 const hostIcon = computed(() => (props.repo.host === 'github' ? GitBranch : GitFork))
+const hostText = computed(() => hostTitle(props.repo, tt))
 const fetched = computed(() => tt('badges.fetched', { when: relativeTime(props.repo.last_fetch, props.now, tt) }))
 const errorText = computed(() => {
   const code = props.repo.error?.code
@@ -37,38 +40,38 @@ const errorText = computed(() => {
   <li class="repo" :data-repo="repo.path">
     <div class="identity">
       <div class="title">
-        <span v-if="repo.host !== 'none'" class="host" :title="tt(`badges.host.${repo.host}`)">
-          <component :is="hostIcon" :size="15" :aria-label="tt(`badges.host.${repo.host}`)" />
+        <span v-if="repo.host !== 'none'" class="host" :title="hostText">
+          <component :is="hostIcon" :size="15" role="img" :aria-label="hostText" />
         </span>
         <span class="name">{{ repo.name }}</span>
         <span v-if="repo.rel_path !== repo.name" class="rel">{{ repo.rel_path }}</span>
       </div>
       <div class="meta">
-        <span class="branch">
+        <button type="button" class="branch" :title="branchTitle(repo, tt)" @click="emit('branches')">
           <GitBranch :size="13" aria-hidden="true" />
           {{ repo.detached ? tt('badges.detached') : repo.branch }}
-        </span>
+        </button>
         <span v-if="repo.remote_url" class="fetched">{{ fetched }}</span>
       </div>
     </div>
 
     <div class="badges">
-      <span v-if="repo.ahead > 0" class="badge accent" :title="tt('badges.aheadTitle', { n: repo.ahead })">
+      <button v-if="repo.ahead > 0" type="button" class="badge accent" :title="tt('badges.aheadTitle', { n: repo.ahead })" @click="emit('history')">
         {{ tt('badges.ahead', { n: repo.ahead }) }}
-      </span>
+      </button>
       <span v-if="repo.behind > 0" class="badge accent" :title="tt('badges.behindTitle', { n: repo.behind })">
         {{ tt('badges.behind', { n: repo.behind }) }}
       </span>
       <span v-if="changes > 0" class="badge warn" :title="tt('badges.changesTitle', { n: changes })">
         {{ tt('badges.changes', { n: changes }) }}
       </span>
-      <span v-if="repo.conflicts > 0" class="badge danger">{{ tt('badges.conflict') }}</span>
-      <span v-if="repo.operation" class="badge danger">{{ tt('badges.operation', { op: repo.operation }) }}</span>
-      <span v-if="repo.detached" class="badge">{{ tt('badges.detached') }}</span>
-      <span v-if="!repo.remote_url" class="badge">{{ tt('badges.noRemote') }}</span>
-      <span v-if="isUnpublished(repo)" class="badge accent">{{ tt('badges.unpublished') }}</span>
-      <span v-if="!needsAttention(repo)" class="badge ok">{{ tt('badges.upToDate') }}</span>
-      <span v-if="repo.error" class="badge danger error" :title="repo.error.message">
+      <span v-if="repo.conflicts > 0" class="badge danger" :title="tt('badges.conflictTitle')">{{ tt('badges.conflict') }}</span>
+      <span v-if="repo.operation" class="badge danger" :title="tt('badges.operationTitle', { op: repo.operation })">{{ tt('badges.operation', { op: repo.operation }) }}</span>
+      <span v-if="repo.detached" class="badge" :title="tt('badges.detachedTitle')">{{ tt('badges.detached') }}</span>
+      <span v-if="!repo.remote_url" class="badge" :title="tt('badges.noRemoteTitle')">{{ tt('badges.noRemote') }}</span>
+      <span v-if="isUnpublished(repo)" class="badge accent" :title="tt('badges.unpublishedTitle')">{{ tt('badges.unpublished') }}</span>
+      <span v-if="!needsAttention(repo)" class="badge ok" :title="tt('badges.upToDateTitle')">{{ tt('badges.upToDate') }}</span>
+      <span v-if="repo.error" class="badge danger error" :title="tt('badges.errorTitle', { message: repo.error.message })">
         {{ errorText }}
         <button type="button" class="clear" :aria-label="tt('badges.clearError')" :title="tt('badges.clearError')" @click="emit('clearError')">
           <X :size="12" />
@@ -77,6 +80,10 @@ const errorText = computed(() => {
     </div>
 
     <div class="buttons">
+      <button type="button" class="history" :title="tt('actions.historyTitle')" @click="emit('history')">
+        <History :size="14" aria-hidden="true" />
+        {{ tt('actions.history') }}
+      </button>
       <span v-if="repo.running" class="running">
         <LoaderCircle :size="15" class="spin" aria-hidden="true" />
         {{ tt(`actions.running.${repo.running}`) }}
@@ -136,6 +143,16 @@ const errorText = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.branch:hover {
+  color: var(--text);
+  text-decoration: underline;
 }
 .badges {
   display: flex;
@@ -152,6 +169,15 @@ const errorText = computed(() => {
   font-size: 12px;
   white-space: nowrap;
   color: var(--text-muted);
+}
+button.badge {
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+button.badge:hover {
+  background: var(--hover);
 }
 .badge.accent {
   color: var(--accent);
@@ -192,6 +218,11 @@ const errorText = computed(() => {
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+.buttons .history {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .buttons button:hover:not(:disabled) {
   background: var(--hover);
