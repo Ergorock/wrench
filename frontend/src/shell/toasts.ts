@@ -21,12 +21,19 @@ export function pushToast(message: string, kind: 'error' | 'info' = 'error'): vo
   }, DURATION_MS)
 }
 
-/** Translated message for a bridge error: `errors.<code>`, or `errors.generic` if unknown. */
-export function errorMessage(err: unknown): string {
-  const key = err instanceof BridgeError ? `errors.${err.code}` : 'errors.generic'
-  return i18n.global.t(i18n.global.te(key) ? key : 'errors.generic')
+/**
+ * Translated message for a bridge error. Lookup order: `tools.<toolId>.errors.<code>` (only when
+ * `toolId` is given), then `errors.<code>`, then `errors.generic`.
+ */
+export function errorMessage(err: unknown, toolId?: string): string {
+  if (err instanceof BridgeError) {
+    const candidates = [...(toolId ? [`tools.${toolId}.errors.${err.code}`] : []), `errors.${err.code}`]
+    const key = candidates.find((k) => i18n.global.te(k))
+    if (key) return i18n.global.t(key)
+  }
+  return i18n.global.t('errors.generic')
 }
 
-export function toastError(err: unknown): void {
-  pushToast(errorMessage(err), 'error')
+export function toastError(err: unknown, toolId?: string): void {
+  pushToast(errorMessage(err, toolId), 'error')
 }

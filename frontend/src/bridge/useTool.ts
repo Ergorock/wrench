@@ -7,7 +7,7 @@ export function useTool(toolId: string) {
       try {
         return await toolCall<T>(toolId, action, payload)
       } catch (err) {
-        if (err instanceof BridgeError) toastError(err)
+        if (err instanceof BridgeError) toastError(err, toolId)
         throw err
       }
     },
