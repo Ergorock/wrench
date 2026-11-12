@@ -18,6 +18,7 @@ from wrench.shared.git.discovery import find_repos
 from wrench.shared.git.history import BranchList, CommitInfo, list_branches, list_commits
 from wrench.shared.git.jobs import RepoJobs
 from wrench.shared.git.ops import GitOpError
+from wrench.shared.git.remote import web_url
 from wrench.shared.git.runner import GitNotFound, find_git
 from wrench.shared.git.status import RepoStatus, read_status
 
@@ -37,6 +38,7 @@ class RepoView(RepoStatus):
     root: str
     name: str
     rel_path: str
+    web_url: str | None
     running: str | None
     error: dict[str, str] | None
 
@@ -148,6 +150,7 @@ class GitReposService(ToolService):
                     root=repo.root,
                     name=repo.path.name,
                     rel_path=repo.rel_path,
+                    web_url=web_url(repo.status.remote_url),
                     running=job.running,
                     error=job.error or repo.error,
                 )

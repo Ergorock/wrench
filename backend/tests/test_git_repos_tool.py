@@ -278,3 +278,13 @@ def test_history_actions_errors(ctx: ToolContext, tmp_path: Path) -> None:
         with pytest.raises(ToolError) as e:
             svc.invoke(action, payload)
         assert e.value.code == code
+
+
+def test_state_has_web_url(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "Dev"
+    local = make_clone(make_remote(tmp_path), root / "local")
+    hosted = make_clone(make_remote(tmp_path / "r2"), root / "hosted")
+    git(hosted, "remote", "set-url", "origin", "git@github.com:owner/repo.git")
+    repos = {r["name"]: r for r in _configured(ctx, root).invoke("get_state", {})["repos"]}
+    assert repos[local.name]["web_url"] is None
+    assert repos[hosted.name]["web_url"] == "https://github.com/owner/repo"
