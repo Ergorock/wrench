@@ -69,7 +69,7 @@ describe('useUpdates', () => {
       check_for_updates: async () => fail('update_network'),
     })
     const u = useUpdates()
-    u.startAutoCheck(s())
+    u.startAutoCheck(() => s())
     await vi.advanceTimersByTimeAsync(0)
     expect(toasts.value).toEqual([])
     expect(u.bannerVisible.value).toBe(false)
@@ -81,7 +81,7 @@ describe('useUpdates', () => {
       check_for_updates: async () => ok(st({ status: 'error', error_code: 'update_network' })),
     })
     const u = useUpdates()
-    u.startAutoCheck(s())
+    u.startAutoCheck(() => s())
     await vi.advanceTimersByTimeAsync(0)
     expect(u.status.value.status).toBe('error')
     expect(toasts.value).toEqual([])
@@ -103,8 +103,8 @@ describe('useUpdates', () => {
     const check = vi.fn(async () => ok(st({ status: 'up_to_date' })))
     mockApi({ get_update_status: async () => ok(st()), check_for_updates: check })
     const u = useUpdates()
-    u.startAutoCheck(s())
-    u.startAutoCheck(s())
+    u.startAutoCheck(() => s())
+    u.startAutoCheck(() => s())
     await vi.advanceTimersByTimeAsync(0)
     expect(check).toHaveBeenCalledTimes(1)
     await vi.advanceTimersByTimeAsync(24 * 3600 * 1000)
@@ -156,5 +156,72 @@ describe('useUpdates', () => {
     await vi.advanceTimersByTimeAsync(1500)
     expect(toasts.value).toHaveLength(1)
     expect(poll).not.toHaveBeenCalled()
+  })
+
+  it('auto_check désactivé : jamais de vérification, même après 24 h', async () => {
+    const check = vi.fn(async () => ok(st({ status: 'up_to_date' })))
+    mockApi({ get_update_status: async () => ok(st()), check_for_updates: check })
+    const u = useUpdates()
+    u.startAutoCheck(() => s({ auto_check: false }))
+    await vi.advanceTimersByTimeAsync(2 * 24 * 3600 * 1000)
+    expect(check).not.toHaveBeenCalled()
+  })
+
+  it("désactiver auto_check à l'exécution arrête les vérifications du minuteur", async () => {
+    const check = vi.fn(async () => ok(st({ status: 'up_to_date' })))
+    mockApi({ get_update_status: async () => ok(st()), check_for_updates: check })
+    const cur = s()
+    const u = useUpdates()
+    u.startAutoCheck(() => cur)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(check).toHaveBeenCalledTimes(1)
+    cur.updates.auto_check = false
+    await vi.advanceTimersByTimeAsync(24 * 3600 * 1000)
+    expect(check).toHaveBeenCalledTimes(1)
+  })
+
+  it('échec du sondage : statut error, le bandeau propose Réessayer', async () => {
+    mockApi({
+      install_update: async () => ok(st({ status: 'downloading', info: INFO })),
+      get_update_status: async () => fail('internal_error'),
+    })
+    const u = useUpdates()
+    await u.install()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(u.status.value.status).toBe('error')
+    expect(u.status.value.error_code).toBe('internal_error')
+    expect(u.bannerVisible.value).toBe(true)
+  })
+
+  it('install après Plus tard réaffiche le bandeau', async () => {
+    mockApi({
+      check_for_updates: async () => ok(st({ status: 'available', info: INFO })),
+      install_update: async () => ok(st({ status: 'downloading', info: INFO })),
+      get_update_status: async () => ok(st({ status: 'downloading', info: INFO })),
+    })
+    const u = useUpdates()
+    await u.checkNow()
+    u.dismiss()
+    await u.install()
+    expect(u.bannerVisible.value).toBe(true)
+  })
+
+  it("une erreur d'une vérification de fond après un échec d'installation ne montre pas le bandeau", async () => {
+    mockApi({
+      get_update_status: async () => ok(st()),
+      install_update: async () => ok(st({ status: 'error', error_code: 'update_install_failed', info: INFO })),
+      check_for_updates: async () => ok(st({ status: 'error', error_code: 'update_network' })),
+    })
+    const u = useUpdates()
+    await u.install()
+    expect(u.bannerVisible.value).toBe(true)
+    u.startAutoCheck(() => s())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(u.status.value.error_code).toBe('update_network')
+    expect(u.bannerVisible.value).toBe(false)
+  })
+
+  it('non supporté par défaut avant la première réponse', () => {
+    expect(useUpdates().status.value.supported).toBe(false)
   })
 })

@@ -45,7 +45,7 @@
     "autoCheck": "Rechercher automatiquement les mises à jour",
     "checkNow": "Rechercher maintenant",
     "upToDate": "Wrench est à jour.",
-    "unsupported": "Les mises à jour ne sont pas disponibles dans cette installation."
+    "unsupported": "Mises à jour disponibles uniquement pour une version installée"
   },
   "warnings": {
     "settings_recovered": "Le fichier de paramètres était illisible : il a été réinitialisé et une copie de sauvegarde a été conservée."
@@ -62,7 +62,7 @@
     "update_network": "Impossible de joindre le serveur de mises à jour.",
     "update_integrity": "Le fichier de mise à jour téléchargé est invalide.",
     "update_install_failed": "L’installation de la mise à jour a échoué.",
-    "update_unsupported": "Les mises à jour ne sont pas disponibles dans cette installation.",
+    "update_unsupported": "Mises à jour disponibles uniquement pour une version installée",
     "no_update": "Aucune mise à jour à installer.",
     "open_failed": "Impossible d’ouvrir le lien.",
     "toolLoadRetry": "Réessayer"

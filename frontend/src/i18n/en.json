@@ -45,7 +45,7 @@
     "autoCheck": "Automatically check for updates",
     "checkNow": "Check now",
     "upToDate": "Wrench is up to date.",
-    "unsupported": "Updates are not available in this installation."
+    "unsupported": "Updates are only available for an installed version"
   },
   "warnings": {
     "settings_recovered": "The settings file was unreadable: it has been reset and a backup copy was kept."
@@ -62,7 +62,7 @@
     "update_network": "Could not reach the update server.",
     "update_integrity": "The downloaded update file is invalid.",
     "update_install_failed": "The update installation failed.",
-    "update_unsupported": "Updates are not available in this installation.",
+    "update_unsupported": "Updates are only available for an installed version",
     "no_update": "No update to install.",
     "open_failed": "Could not open the link.",
     "toolLoadRetry": "Retry"

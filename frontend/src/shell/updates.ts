@@ -10,7 +10,7 @@ const POLL_MS = 500
 export interface Updates {
   status: Ref<UpdateStatus>
   bannerVisible: ComputedRef<boolean>
-  startAutoCheck(settings: Settings): void
+  startAutoCheck(getSettings: () => Settings): void
   checkNow(): Promise<UpdateStatus>
   install(): Promise<void>
   dismiss(): void
@@ -26,7 +26,7 @@ export function shouldAutoCheck(settings: Settings, supported: boolean, now: Dat
 }
 
 const INITIAL: UpdateStatus = {
-  supported: true,
+  supported: false,
   current_version: '',
   status: 'idle',
   info: null,
@@ -73,8 +73,13 @@ function startPolling(): void {
     try {
       status.value = await getUpdateStatus()
       if (!isBusy(status.value)) stopPolling()
-    } catch {
+    } catch (err) {
       stopPolling()
+      status.value = {
+        ...status.value,
+        status: 'error',
+        error_code: err instanceof BridgeError ? err.code : 'internal_error',
+      }
     } finally {
       inFlight = false
     }
@@ -84,12 +89,13 @@ function startPolling(): void {
 async function silentCheck(): Promise<void> {
   try {
     status.value = await checkForUpdates()
+    if (!isBusy(status.value)) installRequested.value = false
   } catch {
     // Automatic checks fail silently.
   }
 }
 
-function startAutoCheck(settings: Settings): void {
+function startAutoCheck(getSettings: () => Settings): void {
   if (started) return
   started = true
   void (async () => {
@@ -97,8 +103,11 @@ function startAutoCheck(settings: Settings): void {
       const current = await getUpdateStatus()
       status.value = current
       if (!current.supported) return
-      dailyTimer = setInterval(() => void silentCheck(), DAY_MS)
-      if (shouldAutoCheck(settings, current.supported, new Date())) await silentCheck()
+      // The tick re-reads the settings so toggling auto_check at runtime takes effect.
+      dailyTimer = setInterval(() => {
+        if (getSettings().updates.auto_check) void silentCheck()
+      }, DAY_MS)
+      if (shouldAutoCheck(getSettings(), current.supported, new Date())) await silentCheck()
     } catch {
       // Never throws, never toasts.
     }
@@ -120,6 +129,7 @@ async function checkNow(): Promise<UpdateStatus> {
 
 async function install(): Promise<void> {
   installRequested.value = true
+  dismissed.value = false
   try {
     status.value = await installUpdate()
     if (isBusy(status.value)) startPolling()

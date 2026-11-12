@@ -63,7 +63,7 @@ async function init(): Promise<void> {
   applyTheme(b.settings.theme)
   const last = b.settings.last_tool
   view.value = last && isActive(last) ? last : 'home'
-  useUpdates().startAutoCheck(b.settings)
+  useUpdates().startAutoCheck(() => settings.value)
 }
 
 // Updates run one after another so each starts from the result of the previous one.
