@@ -4,13 +4,15 @@ import json
 import logging
 import os
 import re
+import subprocess
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
 import winreg
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel
 
@@ -238,3 +240,154 @@ def verify_file(path: Path, size: int, sha256: str) -> None:
     if not ok:
         path.unlink(missing_ok=True)
         raise UpdateError("update_integrity", "Downloaded file failed verification")
+
+
+def launch_installer_detached(path: Path) -> None:
+    """Start the installer fully detached so it survives Wrench closing."""
+    subprocess.Popen(
+        [str(path), *INSTALLER_ARGS],
+        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+        close_fds=True,
+    )
+
+
+UpdateStatus = Literal[
+    "idle", "checking", "available", "up_to_date", "downloading", "installing", "error"
+]
+
+
+class Updater:
+    """Observable update state; check() is synchronous, start_install() runs in a thread."""
+
+    def __init__(
+        self,
+        http: HttpClient,
+        local_version: str,
+        supported: bool,
+        download_dir: Path,
+        launch_installer: Callable[[Path], None],
+        request_close: Callable[[], None] | None = None,
+    ) -> None:
+        self._http = http
+        self._local_version = local_version
+        self._supported = supported
+        self._download_dir = download_dir
+        self._launch_installer = launch_installer
+        self._request_close = request_close
+        self._lock = threading.Lock()
+        self._status: UpdateStatus = "idle"
+        self._info: UpdateInfo | None = None
+        self._progress = 0.0
+        self._error_code: str | None = None
+        self._thread: threading.Thread | None = None
+
+    def set_close_handler(self, fn: Callable[[], None]) -> None:
+        self._request_close = fn
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            return self._snapshot_locked()
+
+    def _snapshot_locked(self) -> dict[str, Any]:
+        return {
+            "supported": self._supported,
+            "current_version": self._local_version,
+            "status": self._status,
+            "info": self._info.model_dump() if self._info else None,
+            "progress": self._progress,
+            "error_code": self._error_code,
+        }
+
+    def _require_supported(self) -> None:
+        if not self._supported:
+            raise UpdateError("update_unsupported", "Updates are not supported for this install")
+
+    def check(self) -> dict[str, Any]:
+        self._require_supported()
+        with self._lock:
+            if self._status in ("downloading", "installing"):
+                return self._snapshot_locked()  # never clobber an install in progress
+            self._status = "checking"
+            self._error_code = None
+        info: UpdateInfo | None = None
+        error: str | None = None
+        try:
+            release = self._http.get_json(API_URL)
+            if not isinstance(release, dict):
+                # A non-object payload is a server answering garbage: same class as bad JSON.
+                raise UpdateError("update_network", "Unexpected release payload")
+            info = select_update(release, self._local_version)
+        except UpdateError as e:
+            error = e.code
+            logger.warning("Update check failed: %s", e.message)
+        with self._lock:
+            self._info = info
+            self._progress = 0.0
+            self._error_code = error
+            self._status = "error" if error else ("available" if info else "up_to_date")
+            return self._snapshot_locked()
+
+    def start_install(self) -> dict[str, Any]:
+        self._require_supported()
+        with self._lock:
+            if self._info is None:
+                raise UpdateError("no_update", "No update available")
+            if self._status in ("downloading", "installing"):
+                return self._snapshot_locked()
+            info = self._info
+            self._status = "downloading"
+            self._progress = 0.0
+            self._error_code = None
+            self._thread = threading.Thread(
+                target=self._run_install, args=(info,), name="wrench-update", daemon=True
+            )
+            self._thread.start()
+            return self._snapshot_locked()
+
+    def wait(self, timeout: float | None = None) -> None:
+        thread = self._thread
+        if thread is not None:
+            thread.join(timeout)
+
+    def _set_error(self, code: str) -> None:
+        with self._lock:
+            self._status = "error"
+            self._error_code = code
+
+    def _on_progress(self, received: int, _total: int, size: int) -> None:
+        # Use the size announced by the API (the one we verify), not the HTTP total.
+        with self._lock:
+            self._progress = min(1.0, max(0.0, received / size)) if size > 0 else 0.0
+
+    def _run_install(self, info: UpdateInfo) -> None:
+        path = self._download_dir / f"Wrench-Setup-{info.version}.exe"
+        try:
+            self._download_dir.mkdir(parents=True, exist_ok=True)
+            self._http.download(
+                info.asset_url, path, lambda r, t: self._on_progress(r, t, info.size)
+            )
+            verify_file(path, info.size, info.sha256)  # launch is unreachable if this raises
+        except UpdateError as e:
+            logger.warning("Update download failed: %s", e.message)
+            self._set_error(e.code)
+            return
+        except Exception:
+            logger.exception("Unexpected error while downloading the update")
+            self._set_error("update_network")
+            return
+        with self._lock:
+            self._status = "installing"
+            self._progress = 1.0
+        try:
+            self._launch_installer(path)
+        except Exception:
+            logger.exception("Could not launch the installer")
+            self._set_error("update_install_failed")
+            return
+        if self._request_close is None:
+            logger.warning("Installer launched but no close handler is set")
+            return
+        try:
+            self._request_close()
+        except Exception:
+            logger.exception("Close handler failed")
