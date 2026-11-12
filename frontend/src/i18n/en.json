@@ -1,0 +1,47 @@
+{
+  "app": { "name": "Wrench" },
+  "common": { "close": "Close" },
+  "nav": {
+    "favorites": "Favorites",
+    "settings": "Settings",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu",
+    "pin": "Add to favorites",
+    "unpin": "Remove from favorites"
+  },
+  "categories": {
+    "system": "System",
+    "productivity": "Productivity",
+    "development": "Development",
+    "files": "Files"
+  },
+  "home": {
+    "title": "Welcome to Wrench",
+    "body": "Your toolbox for Windows. No tools are installed yet: they will show up here and in the left menu as soon as they are available.",
+    "openSettings": "Open settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": { "general": "General", "appearance": "Appearance", "tools": "Tools" },
+    "language": "Language",
+    "autostart": "Start Wrench when Windows starts",
+    "autostartUnavailable": "Autostart is not available in this installation.",
+    "theme": "Theme",
+    "themes": { "light": "Light", "dark": "Dark", "system": "System" },
+    "toolVersion": "Version {version}",
+    "languages": { "fr": "Français", "en": "English" },
+    "noTools": "No tools are installed yet."
+  },
+  "warnings": {
+    "settings_recovered": "The settings file was unreadable: it has been reset and a backup copy was kept."
+  },
+  "errors": {
+    "generic": "Something went wrong.",
+    "unknown_tool": "Unknown tool.",
+    "unknown_action": "Unknown action for this tool.",
+    "invalid_payload": "The data sent is invalid.",
+    "invalid_settings": "The settings provided are invalid.",
+    "autostart_unavailable": "Autostart is not available.",
+    "internal_error": "Internal application error."
+  }
+}

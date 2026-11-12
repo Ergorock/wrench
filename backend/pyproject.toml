@@ -1,0 +1,33 @@
+[project]
+name = "wrench"
+version = "0.1.0"
+description = "Wrench, boîte à outils de bureau pour Windows"
+requires-python = ">=3.12"
+dependencies = [
+    "pywebview>=5.3",
+    "pydantic>=2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
