@@ -1,4 +1,6 @@
+import importlib
 import json
+import pkgutil
 from typing import Any
 
 import pytest
@@ -28,3 +30,17 @@ def test_tool_contract(tool: LoadedTool) -> None:
     en = flatten(json.loads((d / "i18n" / "en.json").read_text("utf-8")))
     assert fr.keys() == en.keys()
     assert {"name", "description"} <= fr.keys()
+
+
+def _package_names(package: str) -> set[str]:
+    pkg = importlib.import_module(package)
+    return {i.name for i in pkgutil.iter_modules(pkg.__path__) if i.ispkg}
+
+
+def test_every_tool_package_is_valid() -> None:
+    assert _package_names("wrench.tools") == {t.manifest.id for t in discover_tools()}
+
+
+def test_contract_check_detects_rejected_tools() -> None:
+    discovered = {t.manifest.id for t in discover_tools("fake_tools", ["system"])}
+    assert _package_names("fake_tools") != discovered
