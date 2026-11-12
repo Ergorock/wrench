@@ -1,11 +1,19 @@
+import hashlib
+import json
 import logging
 import os
 import re
+import urllib.error
+import urllib.parse
+import urllib.request
 import winreg
 from collections.abc import Callable
-from typing import Any
+from pathlib import Path
+from typing import Any, Protocol
 
 from pydantic import BaseModel
+
+from wrench._version import __version__
 
 logger = logging.getLogger("wrench.updater")
 
@@ -25,6 +33,7 @@ UNINSTALL_KEY = (
     r"\{DF1A711B-045E-48E1-A43E-DCBD79719B83}_is1"
 )
 INSTALL_LOCATION_VALUE = "InstallLocation"
+CHUNK_SIZE = 64 * 1024
 
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.\-]+)?$")
 _DIGEST_RE = re.compile(r"^sha256:([0-9a-fA-F]{64})$")
@@ -121,3 +130,92 @@ def read_install_location() -> str | None:
     except OSError:
         return None
     return value if isinstance(value, str) and value else None
+
+
+def check_url(url: str) -> None:
+    """Refuse anything but https on an allowed host (userinfo tricks resolve to the real host)."""
+    parsed = urllib.parse.urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or host not in ALLOWED_HOSTS:
+        raise UpdateError("update_integrity", f"URL not allowed: {url}")
+
+
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        check_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class HttpClient(Protocol):
+    def get_json(self, url: str) -> Any: ...
+
+    def download(self, url: str, dest: Path, on_progress: Callable[[int, int], None]) -> None: ...
+
+
+class UrllibClient:
+    def __init__(self, opener: Any = None) -> None:
+        self._opener = opener or urllib.request.build_opener(SafeRedirectHandler)
+
+    def _request(self, url: str) -> Any:
+        check_url(url)
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": f"Wrench/{__version__}",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        return self._opener.open(req, timeout=TIMEOUT_S)
+
+    def get_json(self, url: str) -> Any:
+        """Invalid JSON is reported as update_network (the server answered garbage)."""
+        try:
+            with self._request(url) as resp:
+                return json.loads(resp.read())
+        except UpdateError:
+            raise  # integrity refusal from check_url / redirect handler
+        except (OSError, ValueError) as e:  # URLError, HTTPError, TimeoutError are OSError
+            raise UpdateError("update_network", str(e)) from e
+
+    def download(self, url: str, dest: Path, on_progress: Callable[[int, int], None]) -> None:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self._request(url) as resp, dest.open("wb") as out:
+                total = int(resp.headers.get("Content-Length") or 0)
+                received = 0
+                while chunk := resp.read(CHUNK_SIZE):
+                    out.write(chunk)
+                    received += len(chunk)
+                    on_progress(received, total)
+        except BaseException as e:
+            dest.unlink(missing_ok=True)
+            if isinstance(e, UpdateError):
+                raise
+            if isinstance(e, (OSError, ValueError)):
+                raise UpdateError("update_network", str(e)) from e
+            raise
+
+
+def verify_file(path: Path, size: int, sha256: str) -> None:
+    """Check size then SHA-256; on mismatch delete the file and raise update_integrity."""
+    digest = hashlib.sha256()
+    try:
+        ok = path.stat().st_size == size
+        if ok:
+            with path.open("rb") as f:
+                while chunk := f.read(CHUNK_SIZE):
+                    digest.update(chunk)
+            ok = digest.hexdigest() == sha256.lower()
+    except OSError as e:
+        raise UpdateError("update_integrity", f"Cannot read downloaded file: {e}") from e
+    if not ok:
+        path.unlink(missing_ok=True)
+        raise UpdateError("update_integrity", "Downloaded file failed verification")
