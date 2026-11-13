@@ -1,0 +1,30 @@
+{
+  "name": "Dev tools",
+  "description": "Encoding and decoding, hexadecimal colors, JSON and XML formatting.",
+  "tabs": { "encode": "Encoding", "color": "Color", "json": "JSON", "xml": "XML" },
+  "encode": {
+    "schemes": { "base64": "Base64", "url": "URL" },
+    "input": "Text",
+    "output": "Result",
+    "encode": "Encode",
+    "decode": "Decode"
+  },
+  "color": {
+    "picker": "Pick a color",
+    "hex": "Hexadecimal",
+    "rgb": "RGB",
+    "hsl": "HSL"
+  },
+  "format": {
+    "input": "Text",
+    "output": "Result",
+    "format": "Format",
+    "minify": "Minify"
+  },
+  "errors": {
+    "invalid_base64": "This text is not valid Base64.",
+    "invalid_color": "This is not a hexadecimal color (e.g. #1E90FF or #FFF).",
+    "invalid_json": "This text is not valid JSON.",
+    "invalid_xml": "This text is not valid XML."
+  }
+}

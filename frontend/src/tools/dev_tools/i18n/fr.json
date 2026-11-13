@@ -1,0 +1,30 @@
+{
+  "name": "Outils dev",
+  "description": "Encodage et décodage, couleurs hexadécimales, mise en forme JSON et XML.",
+  "tabs": { "encode": "Encodage", "color": "Couleur", "json": "JSON", "xml": "XML" },
+  "encode": {
+    "schemes": { "base64": "Base64", "url": "URL" },
+    "input": "Texte",
+    "output": "Résultat",
+    "encode": "Encoder",
+    "decode": "Décoder"
+  },
+  "color": {
+    "picker": "Choisir une couleur",
+    "hex": "Hexadécimal",
+    "rgb": "RVB",
+    "hsl": "TSL"
+  },
+  "format": {
+    "input": "Texte",
+    "output": "Résultat",
+    "format": "Mettre en forme",
+    "minify": "Minifier"
+  },
+  "errors": {
+    "invalid_base64": "Ce texte n’est pas du Base64 valide.",
+    "invalid_color": "Ce n’est pas une couleur hexadécimale (ex. #1E90FF ou #FFF).",
+    "invalid_json": "Ce texte n’est pas du JSON valide.",
+    "invalid_xml": "Ce texte n’est pas du XML valide."
+  }
+}
