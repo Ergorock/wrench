@@ -9,6 +9,8 @@
   },
   "breadcrumb": "Emplacement",
   "folder": {
+    "open": "Ouvrir le dossier {name} dans l'explorateur",
+    "openTitle": "Ouvrir dans l'explorateur",
     "count": "{n} projet | {n} projets"
   },
   "card": {

@@ -608,6 +608,18 @@ describe('ProjectsTool, fiche : prérequis', () => {
   })
 })
 
+describe('ProjectsTool, carte dossier', () => {
+  it('le bouton appelle open_folder avec le chemin du dossier, sans entrer dedans', async () => {
+    await mountTool()
+    const btn = host.querySelector('[data-folder="M3"] + .open-folder') as HTMLButtonElement
+    expect(btn.getAttribute('aria-label')).toContain('M3')
+    btn.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_folder')?.payload).toEqual({ path: 'C:\\Dev\\M3' })
+    expect(host.querySelector('[data-folder="M3"]')).not.toBeNull()
+  })
+})
+
 describe('ProjectsTool, nouveau projet', () => {
   const dialog = () => host.querySelector('[role="dialog"]') as HTMLElement | null
   const type = async (el: HTMLInputElement, value: string) => {
