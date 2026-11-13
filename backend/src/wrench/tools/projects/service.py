@@ -449,9 +449,28 @@ class ProjectsService(ToolService):
             raise ToolError("editor_missing", f"Editor not found: {editor_id}")
         self._spawner(command_for(editor, folder), None, False)
 
+    def _explore(self, folder: Path) -> None:
+        self._spawner(["explorer.exe", str(folder)], None, False)
+
     @action
     def open_explorer(self, path: str) -> None:
-        self._spawner(["explorer.exe", str(self._folder(path))], None, False)
+        self._explore(self._folder(path))
+
+    @action
+    def open_folder(self, path: str) -> None:
+        """Opens a folder of the inventory (the root, a group or a project) in Explorer."""
+        key = _key(path)
+        with self._lock:
+            pending = [self._tree] if self._tree is not None else []
+            found = key in self._projects
+            while pending and not found:
+                node = pending.pop()
+                found = _key(node.path) == key
+                pending.extend(node.folders)
+        folder = Path(path)
+        if not found or not folder.is_dir():
+            raise ToolError("not_a_project", f"Not a folder of the inventory: {path}")
+        self._explore(folder)
 
     @action
     def open_terminal(self, path: str) -> None:

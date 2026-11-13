@@ -362,6 +362,36 @@ def test_open_explorer_and_terminal(ctx: ToolContext, tmp_path: Path) -> None:
     assert spawned.consoles == [False, True]
 
 
+def test_open_folder_of_the_inventory(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    root = a.parent
+    (root / "group").mkdir()
+    (root / "group" / "b").mkdir()
+    (root / "group" / "b" / "pyproject.toml").write_text("", encoding="utf-8")
+    svc.invoke("rescan", {})
+    settled(svc)
+    for folder in (root, root / "group", a):  # root, folder with projects, project
+        svc.invoke("open_folder", {"path": str(folder)})
+    assert spawned.calls == [(["explorer.exe", str(f)], None) for f in (root, root / "group", a)]
+    assert spawned.consoles == [False, False, False]
+
+
+def test_open_folder_refuses_outside_inventory_or_deleted(
+    ctx: ToolContext, tmp_path: Path
+) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    svc.invoke("get_state", {})
+    settled(svc)
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    shutil.rmtree(a)
+    for path in (outside, a, a.parent.parent):
+        with pytest.raises(ToolError) as exc:
+            svc.invoke("open_folder", {"path": str(path)})
+        assert exc.value.code == "not_a_project"
+    assert spawned.calls == []
+
+
 def test_open_terminal_prefers_wt(ctx: ToolContext, tmp_path: Path) -> None:
     svc, spawned, a = launch_service(ctx, tmp_path)
     svc._wt_finder = lambda: "wt.exe"  # noqa: SLF001
