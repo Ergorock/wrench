@@ -30,6 +30,7 @@ let calls: Call[]
 let config: Config
 let current: State
 let picked: string | null
+let setBuildGate: Promise<void> | null
 let build: { command: string | null; suggested: string | null }
 let app: App | null
 let host: HTMLElement
@@ -67,6 +68,7 @@ function installApi(): void {
         }
         if (action === 'open_in' || action === 'open_terminal' || action === 'run_build') return { ok: true, data: null }
         if (action === 'get_build') return { ok: true, data: build }
+        if (action === 'set_build' && setBuildGate) await setBuildGate
         if (action === 'set_build') return { ok: true, data: { command: payload?.command, suggested: build.suggested } }
         return { ok: true, data: current }
       },
@@ -95,6 +97,7 @@ beforeEach(() => {
   current = { ...baseState }
   picked = 'C:\\Dev'
   build = { command: null, suggested: 'npm run build' }
+  setBuildGate = null
   installApi()
   setLanguage('en')
 })
@@ -399,7 +402,8 @@ describe('ProjectsTool, fiche du projet', () => {
     current = { ...baseState, git: { [A]: gitView({ error: { code: 'git_failed', message: 'boom' } }) } }
     await mountTool()
     await select()
-    expect(panel()?.textContent).toContain('boom')
+    expect(panel()?.textContent).not.toContain('boom')
+    expect(panel()?.querySelector('[title="boom"]')?.textContent).toContain('Something went wrong.')
   })
 
   it('Build : suggestion en placeholder, Entrée appelle set_build, Lancer appelle run_build', async () => {
@@ -428,5 +432,47 @@ describe('ProjectsTool, fiche du projet', () => {
     expect(panel()?.textContent).toContain('no longer exists')
     expect(panelButton('Terminal')).toBeUndefined()
     expect(calls.filter((c) => c.action === 'load_status').length).toBe(before)
+  })
+})
+
+describe('ProjectsTool, fiche : build en attente', () => {
+  const A = 'C:\\Dev\\Alpha'
+  const open = async () => {
+    await mountTool()
+    ;(host.querySelector('[data-project]') as HTMLElement).click()
+    await settle()
+    const input = host.querySelector('[data-slot="detail"] input.build') as HTMLInputElement
+    input.value = 'make'
+    input.dispatchEvent(new Event('input'))
+    return input
+  }
+  const run = () => [...host.querySelectorAll('[data-slot="detail"] button')].find((b) => b.textContent?.includes('Run')) as HTMLButtonElement
+
+  it('Lancer attend la fin de l’enregistrement : set_build puis run_build', async () => {
+    let release!: () => void
+    setBuildGate = new Promise<void>((r) => (release = r))
+    const input = await open()
+    input.dispatchEvent(new Event('blur'))
+    run().click()
+    await settle()
+    expect(calls.some((c) => c.action === 'set_build')).toBe(true)
+    expect(calls.some((c) => c.action === 'run_build')).toBe(false)
+    release()
+    await settle()
+    const order = calls.map((c) => c.action).filter((a) => a === 'set_build' || a === 'run_build')
+    expect(order).toEqual(['set_build', 'run_build'])
+    expect(calls.find((c) => c.action === 'set_build')?.payload).toEqual({ path: A, command: 'make' })
+  })
+
+  it('si l’enregistrement échoue, run_build n’est jamais appelé', async () => {
+    let fail!: () => void
+    setBuildGate = new Promise<void>((_r, rej) => (fail = () => rej(new Error('x'))))
+    const input = await open()
+    input.dispatchEvent(new Event('blur'))
+    run().click()
+    await settle()
+    fail()
+    await settle()
+    expect(calls.some((c) => c.action === 'run_build')).toBe(false)
   })
 })

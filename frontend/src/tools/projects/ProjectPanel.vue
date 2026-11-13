@@ -22,7 +22,7 @@ const props = defineProps<{
 // `act` carries the actions that answer with the whole state; ProjectsTool applies it.
 const emit = defineEmits<{ close: []; act: [action: string, payload: object] }>()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const tool = useTool('projects')
 
 const pending = ref<(() => Promise<void>) | null>(null)
@@ -31,6 +31,11 @@ const linking = ref(false)
 const build = ref<BuildInfo>({ command: null, suggested: null })
 const draft = ref('')
 
+const errorText = computed(() => {
+  const code = props.git?.error?.code
+  if (!code) return ''
+  return te(`${PREFIX}errors.${code}`) ? t(`${PREFIX}errors.${code}`) : t('errors.generic')
+})
 const badges = computed(() => gitBadges(props.git))
 const editorTitle = (e: EditorView): string => t(`${PREFIX}editor.${e.available ? 'open' : 'missing'}`, { name: e.name })
 
@@ -62,14 +67,31 @@ async function loadBuild(): Promise<void> {
   }
 }
 
-async function saveBuild(): Promise<void> {
-  if (!buildDraftChanged(build.value, draft.value)) return
-  try {
-    build.value = await tool.call<BuildInfo>('set_build', { path: props.project.path, command: draft.value })
-    draft.value = build.value.command ?? ''
-  } catch {
-    // useTool has already shown the error toast.
-  }
+// The save in flight: "Lancer" waits for it so that run_build never reads the old command.
+let pendingSave: Promise<void> = Promise.resolve()
+let queued: string | null = null
+
+function saveBuild(): void {
+  const command = draft.value
+  if (!buildDraftChanged(build.value, command) || command.trim() === queued) return
+  queued = command.trim()
+  pendingSave = pendingSave.then(async () => {
+    try {
+      build.value = await tool.call<BuildInfo>('set_build', { path: props.project.path, command })
+      draft.value = build.value.command ?? ''
+    } catch {
+      // useTool has already shown the error toast.
+      queued = null
+    }
+  })
+}
+
+async function runBuild(): Promise<void> {
+  saveBuild()
+  await pendingSave
+  // A failed save leaves the draft unsaved: do not run the old command.
+  if (buildDraftChanged(build.value, draft.value)) return
+  await call('run_build')
 }
 
 function commit(message: string, push: boolean): void {
@@ -131,7 +153,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             <span v-for="b in badges" :key="b.kind" class="badge" :class="b.kind">{{ t(`${PREFIX}badges.${b.kind}`, { n: b.n }) }}</span>
           </p>
           <p v-if="git.error" class="error">
-            {{ git.error.message }}
+            <span :title="git.error.message">{{ errorText }}</span>
             <button type="button" class="link" @click="emit('act', 'clear_error', { path: project.path })">
               {{ t(`${PREFIX}panel.dismissError`) }}
             </button>
@@ -163,7 +185,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             @blur="saveBuild"
             @keydown.enter="saveBuild"
           />
-          <button type="button" @click="guarded(() => call('run_build'))">{{ t(`${PREFIX}panel.run`) }}</button>
+          <button type="button" @click="guarded(runBuild)">{{ t(`${PREFIX}panel.run`) }}</button>
         </div>
       </section>
     </template>
