@@ -1,4 +1,6 @@
 import io
+import os
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -40,3 +42,36 @@ def test_icon_png_shell_target_on_a_thread_without_com() -> None:
     thread.start()
     thread.join()
     assert result[0] is not None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows API")
+def test_icon_png_concurrent_cold_start() -> None:
+    # The app asks for every editor icon at once on its first screen; unserialized
+    # first calls made SHGetFileInfoW fail for one of them (and None is cached).
+    vscode = Path(os.path.expandvars(r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe"))
+    if not vscode.is_file():
+        pytest.skip("VS Code not installed")
+    claude = r"shell:AppsFolder\Claude_pzs8sxrjxfjjc!Claude"
+    notepad = r"%SystemRoot%\System32\notepad.exe"
+    script = "\n".join(
+        [
+            "import sys, threading",
+            "from wrench.shared.winicon import icon_png",
+            "out = {}",
+            "def run(t): out[t] = icon_png(t)",
+            "ts = [threading.Thread(target=run, args=(t,)) for t in sys.argv[1:]]",
+            "[t.start() for t in ts]",
+            "[t.join() for t in ts]",
+            "print(len(out[sys.argv[1]] or b''), out[sys.argv[2]] is not None)",
+        ]
+    )
+    for _ in range(8):  # each run is a fresh process, hence a cold start
+        done = subprocess.run(
+            [sys.executable, "-c", script, str(vscode), claude, notepad],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        size, claude_ok = done.stdout.split()
+        assert int(size) > 500
+        assert claude_ok == "True"

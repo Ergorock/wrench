@@ -6,11 +6,13 @@ import logging
 import os
 import struct
 import sys
+import threading
 import zlib
 from ctypes import wintypes
 from typing import Any
 
 logger = logging.getLogger("wrench.shared.winicon")
+_lock = threading.Lock()
 
 SHGFI_ICON = 0x100
 SHGFI_LARGEICON = 0x0
@@ -134,7 +136,8 @@ def icon_png(target: str, size: int = 32) -> bytes | None:
     if sys.platform != "win32":
         return None
     try:
-        return _icon_png(os.path.expandvars(target), size)
+        with _lock:
+            return _icon_png(os.path.expandvars(target), size)
     except Exception:
         logger.debug("icon extraction failed for %r", target, exc_info=True)
         return None
