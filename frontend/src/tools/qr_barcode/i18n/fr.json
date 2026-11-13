@@ -1,0 +1,21 @@
+{
+  "name": "QR et codes-barres",
+  "description": "Créer un QR code ou un code-barres à partir d’un texte, et l’enregistrer en SVG.",
+  "kind": "Type",
+  "qr": "QR code",
+  "barcode": "Code-barres",
+  "data": "Texte à encoder",
+  "dataPlaceholder": "ex. https://example.com ou une référence",
+  "barcodeType": "Format",
+  "barcodeTypes": {
+    "code128": "Code 128 (tout texte ASCII)",
+    "code39": "Code 39 (majuscules, chiffres, - . $ / + % espace)",
+    "ean13": "EAN-13 (12 chiffres, la clé est calculée)"
+  },
+  "preview": "Aperçu",
+  "noPreview": "Saisissez un texte pour afficher l’aperçu.",
+  "fileName": "Nom du fichier",
+  "export": "Enregistrer en SVG…",
+  "exported": "Fichier enregistré : {path}",
+  "fileNameDefault": "code"
+}

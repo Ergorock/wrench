@@ -1,0 +1,21 @@
+{
+  "name": "QR and barcodes",
+  "description": "Create a QR code or a barcode from text, and save it as SVG.",
+  "kind": "Type",
+  "qr": "QR code",
+  "barcode": "Barcode",
+  "data": "Text to encode",
+  "dataPlaceholder": "e.g. https://example.com or a reference",
+  "barcodeType": "Format",
+  "barcodeTypes": {
+    "code128": "Code 128 (any ASCII text)",
+    "code39": "Code 39 (uppercase, digits, - . $ / + % space)",
+    "ean13": "EAN-13 (12 digits, check digit computed)"
+  },
+  "preview": "Preview",
+  "noPreview": "Enter some text to see the preview.",
+  "fileName": "File name",
+  "export": "Save as SVG…",
+  "exported": "File saved: {path}",
+  "fileNameDefault": "code"
+}
