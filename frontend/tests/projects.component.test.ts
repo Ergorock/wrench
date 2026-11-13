@@ -419,7 +419,7 @@ describe('ProjectsTool, fiche du projet', () => {
     await mountTool()
     await select()
     expect(panel()?.textContent).not.toContain('boom')
-    expect(panel()?.querySelector('[title="boom"]')?.textContent).toContain('Something went wrong.')
+    expect(panel()?.querySelector('[title="boom"]')?.textContent).toContain('The git command failed.')
   })
 
   it('Build : suggestion en placeholder, Entrée appelle set_build, Lancer appelle run_build', async () => {

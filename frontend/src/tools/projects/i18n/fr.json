@@ -106,7 +106,20 @@
     "target_exists": "Un projet de ce nom existe déjà dans ce dossier.",
     "invalid_url": "Cette adresse de dépôt n’est pas valide.",
     "remote_exists": "Ce dépôt a déjà un origin.",
-    "copy_failed": "La copie du modèle a échoué."
+    "copy_failed": "La copie du modèle a échoué.",
+    "root_missing": "Le dossier racine est introuvable.",
+    "no_build_command": "Aucune commande de build n’est enregistrée ni suggérée.",
+    "not_a_repo": "Ce dossier n’est pas un dépôt git.",
+    "empty_message": "Le message du commit est obligatoire.",
+    "git_failed": "La commande git a échoué.",
+    "nothing_to_commit": "Il n’y a rien à commiter.",
+    "no_remote": "Ce dépôt n’a pas de distant.",
+    "auth_required": "Authentification requise : connectez-vous au distant avec git une première fois.",
+    "timeout": "L’opération git a pris trop de temps.",
+    "detached_head": "La tête est détachée : passez sur une branche d’abord.",
+    "in_progress": "Une opération git (merge, rebase…) est en cours ou des conflits ne sont pas résolus dans ce dépôt.",
+    "diverged": "Les branches locale et distante ont divergé : ni tirage en avance rapide ni envoi possible.",
+    "unknown_ref": "Cette branche n’existe plus : actualisez la liste."
   },
   "new": {
     "title": "Nouveau projet",

@@ -106,7 +106,20 @@
     "target_exists": "A project with this name already exists in this folder.",
     "invalid_url": "This repository address is not valid.",
     "remote_exists": "This repository already has an origin.",
-    "copy_failed": "The copy of the template failed."
+    "copy_failed": "The copy of the template failed.",
+    "root_missing": "The root folder was not found.",
+    "no_build_command": "No build command is saved or suggested.",
+    "not_a_repo": "This folder is not a git repository.",
+    "empty_message": "The commit message is required.",
+    "git_failed": "The git command failed.",
+    "nothing_to_commit": "There is nothing to commit.",
+    "no_remote": "This repository has no remote.",
+    "auth_required": "Authentication required: sign in to the remote with git once.",
+    "timeout": "The git operation took too long.",
+    "detached_head": "HEAD is detached: switch to a branch first.",
+    "in_progress": "A git operation (merge, rebase…) is in progress, or conflicts are unresolved, in this repository.",
+    "diverged": "The local and remote branches have diverged: neither a fast-forward pull nor a push is possible.",
+    "unknown_ref": "This branch no longer exists: refresh the list."
   },
   "new": {
     "title": "New project",
