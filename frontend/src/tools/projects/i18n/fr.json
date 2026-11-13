@@ -1,4 +1,59 @@
 {
   "name": "Projets",
-  "description": "Tous vos projets au même endroit."
+  "description": "Tous vos projets au même endroit.",
+  "toolbar": {
+    "search": "Rechercher un projet…",
+    "refresh": "Actualiser",
+    "settings": "Réglages"
+  },
+  "breadcrumb": "Emplacement",
+  "folder": {
+    "count": "{n} projet | {n} projets"
+  },
+  "badges": {
+    "changes": "● {n}",
+    "changesTitle": "{n} fichier(s) modifié(s) ou non suivi(s)",
+    "ahead": "↑{n}",
+    "aheadTitle": "{n} commit(s) à pousser",
+    "conflict": "⚠ conflit",
+    "conflictTitle": "Des fichiers sont en conflit",
+    "clean": "✓ propre",
+    "cleanTitle": "Rien à valider ni à pousser"
+  },
+  "editor": {
+    "open": "{name}",
+    "missing": "{name} : introuvable"
+  },
+  "empty": {
+    "noRoot": "Choisissez le dossier qui contient vos projets.",
+    "chooseFolder": "Choisir un dossier",
+    "rootMissing": "Le dossier racine est introuvable : {root}",
+    "settings": "Changer de dossier",
+    "scanning": "Analyse de vos projets…",
+    "scanFailed": "L’analyse a échoué : {message}",
+    "emptyFolder": "Ce dossier est vide.",
+    "noMatch": "Aucun projet ne correspond à la recherche."
+  },
+  "config": {
+    "title": "Réglages",
+    "root": "Dossier des projets",
+    "templates": "Dossier des modèles",
+    "templatesHint": "Facultatif : les dossiers qu’il contient sont des modèles.",
+    "browse": "Parcourir…",
+    "depth": "Profondeur d’analyse",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "confirm": {
+    "confirm": "Confirmer",
+    "cancel": "Annuler"
+  },
+  "errors": {
+    "not_a_project": "Ce projet n’existe plus : actualisez la liste.",
+    "editor_missing": "Cet éditeur est introuvable sur cet ordinateur.",
+    "launch_failed": "Le programme n’a pas pu être lancé.",
+    "git_not_found": "git est introuvable sur cet ordinateur.",
+    "busy": "Une opération est déjà en cours sur ce projet.",
+    "scan_failed": "L’analyse a échoué."
+  }
 }

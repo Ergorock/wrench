@@ -1,4 +1,59 @@
 {
   "name": "Projects",
-  "description": "All your projects in one place."
+  "description": "All your projects in one place.",
+  "toolbar": {
+    "search": "Search a project…",
+    "refresh": "Refresh",
+    "settings": "Settings"
+  },
+  "breadcrumb": "Location",
+  "folder": {
+    "count": "{n} project | {n} projects"
+  },
+  "badges": {
+    "changes": "● {n}",
+    "changesTitle": "{n} modified or untracked file(s)",
+    "ahead": "↑{n}",
+    "aheadTitle": "{n} commit(s) to push",
+    "conflict": "⚠ conflict",
+    "conflictTitle": "Some files are in conflict",
+    "clean": "✓ clean",
+    "cleanTitle": "Nothing to commit or push"
+  },
+  "editor": {
+    "open": "{name}",
+    "missing": "{name}: not found"
+  },
+  "empty": {
+    "noRoot": "Choose the folder that contains your projects.",
+    "chooseFolder": "Choose a folder",
+    "rootMissing": "The root folder was not found: {root}",
+    "settings": "Change the folder",
+    "scanning": "Scanning your projects…",
+    "scanFailed": "The scan failed: {message}",
+    "emptyFolder": "This folder is empty.",
+    "noMatch": "No project matches your search."
+  },
+  "config": {
+    "title": "Settings",
+    "root": "Projects folder",
+    "templates": "Templates folder",
+    "templatesHint": "Optional: the folders in it are templates.",
+    "browse": "Browse…",
+    "depth": "Scan depth",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "confirm": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "not_a_project": "This project no longer exists: refresh the list.",
+    "editor_missing": "This editor was not found on this computer.",
+    "launch_failed": "The program could not be started.",
+    "git_not_found": "git was not found on this computer.",
+    "busy": "An operation is already running on this project.",
+    "scan_failed": "The scan failed."
+  }
 }
