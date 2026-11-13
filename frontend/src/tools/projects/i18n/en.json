@@ -77,7 +77,23 @@
       "save": "Link"
     }
   },
+  "requirements": {
+    "title": "Requirements",
+    "check": "Check",
+    "checking": "Checking…",
+    "none": "No requirement detected",
+    "status": {
+      "ok": "OK",
+      "too_old": "Too old",
+      "missing": "Missing",
+      "unknown": "Unknown",
+      "manual": "Check it yourself"
+    },
+    "required": "required {v}",
+    "installed": "installed {v}"
+  },
   "errors": {
+    "check_failed": "The check failed.",
     "not_a_project": "This project no longer exists: refresh the list.",
     "editor_missing": "This editor was not found on this computer.",
     "launch_failed": "The program could not be started.",

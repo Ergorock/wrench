@@ -7,6 +7,8 @@ import {
   gitBadges,
   needsTemplateConfirm,
   normalize,
+  requirementIcon,
+  requirementLabelKey,
   searchProjects,
 } from '../src/tools/projects/logic'
 import type { FolderEntry, GitView, ProjectEntry } from '../src/tools/projects/types'
@@ -109,5 +111,21 @@ describe('projects logic, fiche', () => {
     expect(buildDraftChanged({ command: null, suggested: 'npm run build' }, '')).toBe(false)
     expect(buildDraftChanged({ command: null, suggested: 'npm run build' }, 'make')).toBe(true)
     expect(buildDraftChanged({ command: 'make', suggested: null }, '')).toBe(true)
+  })
+})
+
+describe('requirements', () => {
+  const statuses = ['ok', 'too_old', 'missing', 'unknown', 'manual'] as const
+
+  it('chaque état a une icône distincte', () => {
+    const icons = statuses.map(requirementIcon)
+    expect(new Set(icons).size).toBe(statuses.length)
+  })
+
+  it('chaque état a un libellé dans les deux langues', () => {
+    for (const s of statuses) {
+      expect(requirementLabelKey(s)).toBe(`tools.projects.requirements.status.${s}`)
+      for (const json of [enTool, frTool]) expect(json.requirements.status[s]).toEqual(expect.any(String))
+    }
   })
 })

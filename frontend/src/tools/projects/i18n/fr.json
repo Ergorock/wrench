@@ -77,7 +77,23 @@
       "save": "Associer"
     }
   },
+  "requirements": {
+    "title": "Prérequis",
+    "check": "Vérifier",
+    "checking": "Vérification…",
+    "none": "Aucun prérequis détecté",
+    "status": {
+      "ok": "OK",
+      "too_old": "Trop ancien",
+      "missing": "Absent",
+      "unknown": "Inconnu",
+      "manual": "À vérifier vous-même"
+    },
+    "required": "requis {v}",
+    "installed": "installé {v}"
+  },
   "errors": {
+    "check_failed": "La vérification a échoué.",
     "not_a_project": "Ce projet n’existe plus : actualisez la liste.",
     "editor_missing": "Cet éditeur est introuvable sur cet ordinateur.",
     "launch_failed": "Le programme n’a pas pu être lancé.",

@@ -3,7 +3,7 @@ import { createApp, nextTick, type App } from 'vue'
 import { i18n, setLanguage } from '../src/i18n'
 import { toasts } from '../src/shell/toasts'
 import ProjectsTool from '../src/tools/projects/ProjectsTool.vue'
-import type { Config, FolderEntry, ProjectEntry, State } from '../src/tools/projects/types'
+import type { Config, FolderEntry, ProjectEntry, Requirement, RequirementsView, State } from '../src/tools/projects/types'
 
 const project = (name: string, rel: string, o: Partial<ProjectEntry> = {}): ProjectEntry => ({
   name,
@@ -32,6 +32,9 @@ let current: State
 let picked: string | null
 let setBuildGate: Promise<void> | null
 let build: { command: string | null; suggested: string | null }
+let reqViews: RequirementsView[]
+let reqFail = false
+let reqChecked = false
 let app: App | null
 let host: HTMLElement
 
@@ -67,6 +70,12 @@ function installApi(): void {
           }
         }
         if (action === 'open_in' || action === 'open_terminal' || action === 'run_build') return { ok: true, data: null }
+        if (action === 'check_requirements' || action === 'get_requirements') {
+          if (action === 'check_requirements') reqChecked = true
+          if (!reqChecked) return { ok: true, data: { running: false, items: null, error: null } }
+          if (reqFail) return { ok: false, error: { code: 'boom', message: 'down' } }
+          return { ok: true, data: reqViews.length > 1 ? reqViews.shift() : reqViews[0] }
+        }
         if (action === 'get_build') return { ok: true, data: build }
         if (action === 'set_build' && setBuildGate) await setBuildGate
         if (action === 'set_build') return { ok: true, data: { command: payload?.command, suggested: build.suggested } }
@@ -98,6 +107,9 @@ beforeEach(() => {
   picked = 'C:\\Dev'
   build = { command: null, suggested: 'npm run build' }
   setBuildGate = null
+  reqViews = [{ running: false, items: null, error: null }]
+  reqFail = false
+  reqChecked = false
   installApi()
   setLanguage('en')
 })
@@ -474,5 +486,120 @@ describe('ProjectsTool, fiche : build en attente', () => {
     fail()
     await settle()
     expect(calls.some((c) => c.action === 'run_build')).toBe(false)
+  })
+})
+
+describe('ProjectsTool, fiche : prérequis', () => {
+  const A = 'C:\\Dev\\Alpha'
+  const panel = () => host.querySelector('[data-slot="detail"]') as HTMLElement
+  const verify = () => [...panel().querySelectorAll('button')].find((b) => b.textContent?.includes('Check')) as HTMLButtonElement
+  const getReqs = () => calls.filter((c) => c.action === 'get_requirements').length
+  const mountFake = async (): Promise<void> => {
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    app = createApp(ProjectsTool).use(i18n)
+    app.mount(host)
+    await vi.advanceTimersByTimeAsync(0)
+    ;(host.querySelector('[data-project]') as HTMLElement).click()
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  const item = (tool: string, status: Requirement['status'], o: Record<string, unknown> = {}) => ({
+    tool,
+    required: null,
+    installed: null,
+    status,
+    source: 'package.json',
+    ...o,
+  })
+
+  it('Vérifier appelle check_requirements, puis les lignes affichent état, contrainte, version et source', async () => {
+    reqViews = [
+      { running: true, items: null, error: null },
+      {
+        running: false,
+        items: [
+          item('Node', 'ok', { required: '>=18', installed: '20.1.0' }),
+          item('Python', 'missing', { required: '3.12', source: 'pyproject.toml' }),
+        ],
+        error: null,
+      },
+    ]
+    await mountTool()
+    ;(host.querySelector('[data-project]') as HTMLElement).click()
+    await settle()
+    verify().click()
+    await wait(1100)
+    await nextTick()
+    expect(calls.find((c) => c.action === 'check_requirements')?.payload).toEqual({ path: A })
+    const rows = [...panel().querySelectorAll('[data-requirement]')]
+    expect(rows).toHaveLength(2)
+    expect(rows[0].textContent).toContain('Node')
+    expect(rows[0].textContent).toContain('>=18')
+    expect(rows[0].textContent).toContain('20.1.0')
+    expect(rows[0].textContent).toContain('OK')
+    expect(rows[0].getAttribute('title')).toBe('package.json')
+    expect(rows[1].textContent).toContain('Python')
+    expect(rows[1].textContent).toContain('Missing')
+    expect(rows[1].getAttribute('title')).toBe('pyproject.toml')
+  })
+
+  it('liste vide : Aucun prérequis détecté', async () => {
+    reqViews = [{ running: false, items: [], error: null }]
+    await mountTool()
+    ;(host.querySelector('[data-project]') as HTMLElement).click()
+    await settle()
+    verify().click()
+    await settle()
+    expect(panel().textContent).toContain('No requirement detected')
+  })
+
+  it('erreur de vérification : traduction par code, repli générique', async () => {
+    reqViews = [{ running: false, items: null, error: { code: 'busy', message: 'x' } }]
+    await mountTool()
+    ;(host.querySelector('[data-project]') as HTMLElement).click()
+    await settle()
+    verify().click()
+    await settle()
+    expect(panel().textContent).toContain('An operation is already running')
+    reqViews = [{ running: false, items: null, error: { code: 'nope', message: 'x' } }]
+    verify().click()
+    await settle()
+    expect(panel().textContent).toContain('Something went wrong.')
+  })
+
+  describe('sondage', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    it('sonde toutes les secondes pendant running, puis s’arrête ; plus de minuterie au démontage', async () => {
+      reqViews = [{ running: true, items: null, error: null }]
+      await mountFake()
+      verify().click()
+      await vi.advanceTimersByTimeAsync(0)
+      const base = getReqs()
+      await vi.advanceTimersByTimeAsync(2500)
+      expect(getReqs()).toBe(base + 2)
+      reqViews = [{ running: false, items: [], error: null }]
+      await vi.advanceTimersByTimeAsync(1000)
+      const done = getReqs()
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(getReqs()).toBe(done)
+      reqViews = [{ running: true, items: null, error: null }]
+      verify().click()
+      await vi.advanceTimersByTimeAsync(0)
+      app?.unmount()
+      app = null
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('un seul toast par série d’échecs', async () => {
+      reqViews = [{ running: true, items: null, error: null }]
+      await mountFake()
+      verify().click()
+      await vi.advanceTimersByTimeAsync(0)
+      reqFail = true
+      await vi.advanceTimersByTimeAsync(3500)
+      expect(toasts.value).toHaveLength(1)
+    })
   })
 })

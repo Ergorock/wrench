@@ -1,4 +1,4 @@
-import type { BuildInfo, FolderEntry, GitView, ProjectEntry } from './types'
+import type { BuildInfo, FolderEntry, GitView, ProjectEntry, RequirementStatus } from './types'
 
 export type Badge = { kind: 'changes' | 'ahead' | 'conflict' | 'clean' | 'error'; n?: number }
 
@@ -60,3 +60,14 @@ export function gitBadges(g: GitView | undefined): Badge[] {
   if (g.error) badges.push({ kind: 'error' })
   return badges.length > 0 ? badges : [{ kind: 'clean' }]
 }
+
+const REQUIREMENT_ICONS: Record<RequirementStatus, string> = {
+  ok: 'check',
+  too_old: 'alert',
+  missing: 'x',
+  unknown: 'help',
+  manual: 'hand',
+}
+/** Name of the icon of a requirement status (the panel maps it to a component). */
+export const requirementIcon = (s: RequirementStatus): string => REQUIREMENT_ICONS[s]
+export const requirementLabelKey = (s: RequirementStatus): string => `tools.projects.requirements.status.${s}`

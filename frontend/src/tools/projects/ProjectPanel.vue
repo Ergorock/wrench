@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X } from '@lucide/vue'
+import { Check, CircleAlert, CircleHelp, Hand, LoaderCircle, TriangleAlert, X } from '@lucide/vue'
 import type { RepoView } from '../git_repos/types'
 import CommitDialog from '../git_repos/CommitDialog.vue'
+import { toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
+import { toastError } from '../../shell/toasts'
 import ConfirmDialog from './ConfirmDialog.vue'
 import RemoteDialog from './RemoteDialog.vue'
-import { buildDraftChanged, gitBadges, needsTemplateConfirm } from './logic'
-import type { BuildInfo, EditorView, GitView, ProjectEntry } from './types'
+import { buildDraftChanged, gitBadges, needsTemplateConfirm, requirementIcon, requirementLabelKey } from './logic'
+import type { BuildInfo, EditorView, GitView, ProjectEntry, RequirementsView } from './types'
 
 const PREFIX = 'tools.projects.'
+const POLL_MS = 1000
+const ICONS = { check: Check, alert: TriangleAlert, x: CircleAlert, help: CircleHelp, hand: Hand } as const
 
 const props = defineProps<{
   project: ProjectEntry
@@ -30,7 +34,17 @@ const committing = ref(false)
 const linking = ref(false)
 const build = ref<BuildInfo>({ command: null, suggested: null })
 const draft = ref('')
+const requirements = ref<RequirementsView | null>(null)
+let reqTimer: ReturnType<typeof setTimeout> | null = null
+let reqFailed = false
+// Bumped when the poll must be forgotten (project changed, panel closed): a late answer is ignored.
+let reqEpoch = 0
 
+const requirementsError = computed(() => {
+  const code = requirements.value?.error?.code
+  if (!code) return ''
+  return te(`${PREFIX}errors.${code}`) ? t(`${PREFIX}errors.${code}`) : t('errors.generic')
+})
 const errorText = computed(() => {
   const code = props.git?.error?.code
   if (!code) return ''
@@ -45,6 +59,53 @@ async function call(action: string, payload: object = {}): Promise<void> {
   } catch {
     // useTool has already shown the error toast.
   }
+}
+
+function stopRequirements(): void {
+  reqEpoch++
+  if (reqTimer !== null) clearTimeout(reqTimer)
+  reqTimer = null
+  reqFailed = false
+}
+
+// get_requirements is polled every second while the check runs, and not at all otherwise.
+// The poll bypasses useTool so that a failing read shows one toast per failure streak.
+function scheduleRequirements(): void {
+  if (reqTimer !== null || !requirements.value?.running) return
+  const epoch = reqEpoch
+  reqTimer = setTimeout(async () => {
+    reqTimer = null
+    try {
+      const view = await toolCall<RequirementsView>('projects', 'get_requirements', { path: props.project.path })
+      if (epoch !== reqEpoch) return
+      requirements.value = view
+      reqFailed = false
+    } catch (err) {
+      if (epoch !== reqEpoch) return
+      if (!reqFailed) toastError(err, 'projects')
+      reqFailed = true
+    }
+    scheduleRequirements()
+  }, POLL_MS)
+}
+
+async function readRequirements(action: 'check_requirements' | 'get_requirements'): Promise<void> {
+  const epoch = reqEpoch
+  try {
+    const view = await tool.call<RequirementsView>(action, { path: props.project.path })
+    if (epoch !== reqEpoch) return
+    requirements.value = view
+    scheduleRequirements()
+  } catch {
+    // useTool has already shown the error toast.
+  }
+}
+
+// A project change forgets the previous project's check; a check already running is picked up again.
+function loadRequirements(): void {
+  stopRequirements()
+  requirements.value = null
+  if (!props.missing) void readRequirements('get_requirements')
 }
 
 // Everything that opens something goes through the template confirmation.
@@ -110,8 +171,13 @@ function onKeydown(e: KeyboardEvent): void {
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   if (!props.missing) void loadBuild()
+  loadRequirements()
 })
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+watch(() => props.project.path, loadRequirements)
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+  stopRequirements()
+})
 </script>
 
 <template>
@@ -187,6 +253,36 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
           />
           <button type="button" @click="guarded(runBuild)">{{ t(`${PREFIX}panel.run`) }}</button>
         </div>
+      </section>
+
+      <section>
+        <h3>{{ t(`${PREFIX}requirements.title`) }}</h3>
+        <div class="row">
+          <button type="button" :disabled="requirements?.running" @click="readRequirements('check_requirements')">
+            {{ t(`${PREFIX}requirements.check`) }}
+          </button>
+          <span v-if="requirements?.running" class="muted spin">
+            <LoaderCircle :size="14" aria-hidden="true" /> {{ t(`${PREFIX}requirements.checking`) }}
+          </span>
+        </div>
+        <p v-if="requirements?.error" class="error">
+          <span :title="requirements.error.message">{{ requirementsError }}</span>
+        </p>
+        <ul v-if="requirements?.items?.length" class="reqs">
+          <li v-for="r in requirements.items" :key="r.tool" data-requirement :title="r.source" :class="r.status">
+            <component
+              :is="ICONS[requirementIcon(r.status) as keyof typeof ICONS]"
+              :size="14"
+              role="img"
+              :aria-label="t(requirementLabelKey(r.status))"
+            />
+            <span class="tool">{{ r.tool }}</span>
+            <span class="muted">{{ t(requirementLabelKey(r.status)) }}</span>
+            <span v-if="r.required" class="muted">{{ t(`${PREFIX}requirements.required`, { v: r.required }) }}</span>
+            <span v-if="r.installed" class="muted">{{ t(`${PREFIX}requirements.installed`, { v: r.installed }) }}</span>
+          </li>
+        </ul>
+        <p v-else-if="requirements?.items && !requirements.running" class="muted">{{ t(`${PREFIX}requirements.none`) }}</p>
       </section>
     </template>
 
@@ -284,6 +380,41 @@ button.link {
   background: none;
   color: var(--accent);
   text-decoration: underline;
+}
+.spin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.spin svg {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.reqs {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.reqs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.reqs .tool {
+  font-weight: 600;
+}
+.reqs .ok svg {
+  color: var(--accent);
+}
+.reqs .missing svg,
+.reqs .too_old svg {
+  color: var(--danger);
 }
 .build {
   flex: 1;

@@ -49,3 +49,19 @@ export interface EditorView {
   exe: string
   available: boolean
 }
+
+export type RequirementStatus = 'ok' | 'too_old' | 'missing' | 'unknown' | 'manual'
+
+export interface Requirement {
+  tool: string
+  required: string | null
+  installed: string | null
+  status: RequirementStatus
+  source: string
+}
+
+export interface RequirementsView {
+  running: boolean
+  items: Requirement[] | null
+  error: { code: string; message: string } | null
+}
