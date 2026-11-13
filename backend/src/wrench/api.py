@@ -32,7 +32,7 @@ def _fail(code: str, message: str) -> dict[str, Any]:
 
 
 class Api:
-    """Bridge to the front. Only the nine public methods are exposed to JS
+    """Bridge to the front. Only the eleven public methods are exposed to JS
     (see `main._exposed`); everything else is private."""
 
     def __init__(
