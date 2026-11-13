@@ -280,7 +280,8 @@ class ProjectsService(ToolService):
         entry = self._project(path)
         with self._lock:
             is_git = _key(entry.path) in self._git_projects
-        if not is_git:
+        # Checked again now: a `.git` deleted since the scan would send git to the parent.
+        if not is_git or not (Path(entry.path) / ".git").exists():
             raise ToolError("not_a_repo", f"Not a git repository: {path}")
         return self._repo(entry)
 

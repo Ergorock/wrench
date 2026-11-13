@@ -85,3 +85,8 @@ def test_spawn_oserror_becomes_launch_failed(monkeypatch: pytest.MonkeyPatch) ->
     with pytest.raises(ToolError) as exc:
         launch.spawn(["x"], None)
     assert exc.value.code == "launch_failed"
+
+
+def test_terminal_args_wt_escapes_semicolons_in_folder() -> None:
+    args = terminal_args(Path("C:\Dev\a;b"), None, "wt.exe")
+    assert args == ["wt.exe", "-d", "C:\Dev\a\;b"]

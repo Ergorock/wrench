@@ -663,3 +663,25 @@ def test_create_git_failure_keeps_the_folder(
     assert state["creation"]["created"] == str(root / "N")
     assert (root / "N" / "README.md").is_file()
     assert [p["name"] for p in state["tree"]["projects"]] == ["N"]
+
+
+def test_git_guard_holds_when_dot_git_is_deleted_after_the_scan(
+    ctx: ToolContext, tmp_path: Path
+) -> None:
+    parent = make_git_project(tmp_path, "parent")
+    git(parent, "remote", "add", "origin", "https://example.org/p/parent.git")
+    child = make_git_project(parent, "child")
+    svc = configured(ctx, parent)
+    assert [p["path"] for p in settled(svc)["tree"]["projects"]] == [str(child)]
+    shutil.rmtree(child / ".git", onexc=force_remove)
+    (child / "new.txt").write_text("x", encoding="utf-8")
+    for action, payload in [
+        ("commit", {"path": str(child), "message": "m"}),
+        ("push", {"path": str(child)}),
+        ("set_remote", {"path": str(child), "url": "https://example.org/x/y.git"}),
+    ]:
+        with pytest.raises(ToolError) as e:
+            svc.invoke(action, payload)
+        assert e.value.code == "not_a_repo", action
+    assert git(parent, "remote", "get-url", "origin") == "https://example.org/p/parent.git"
+    assert git(parent, "log", "--oneline").count("\n") == 0  # still the single init commit

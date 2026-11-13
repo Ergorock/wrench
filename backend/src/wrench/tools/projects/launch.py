@@ -42,7 +42,7 @@ def find_wt() -> str | None:
 def terminal_args(folder: Path, command: str | None, wt: str | None) -> list[str]:
     """A new terminal window in `folder`, left open after `command`."""
     if wt:
-        args = [wt, "-d", str(folder)]
+        args = [wt, "-d", str(folder).replace(";", r"\;")]
         if command:
             # wt reads an unescaped `;` as its own command separator.
             args += ["powershell", "-NoExit", "-Command", command.replace(";", r"\;")]
