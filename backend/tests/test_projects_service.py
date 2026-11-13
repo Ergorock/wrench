@@ -12,6 +12,7 @@ import pytest
 from git_fixtures import commit_file, git, make_clone, make_remote
 
 from wrench.sdk import ToolContext, ToolError, ToolStorage
+from wrench.shared.editors import Editor
 from wrench.shared.git.runner import GitNotFound
 from wrench.tools.projects.service import ProjectsService
 
@@ -272,3 +273,156 @@ def test_push_busy(ctx: ToolContext, tmp_path: Path) -> None:
         assert e.value.code == "busy"
     finally:
         release.set()
+
+
+# --- open, terminal, build ---------------------------------------------------------
+
+
+class Spawned:
+    def __init__(self) -> None:
+        self.calls: list[tuple[list[str], Path | None]] = []
+
+    def __call__(self, args: list[str], cwd: Path | None) -> None:
+        self.calls.append((args, cwd))
+
+
+def launch_service(
+    ctx: ToolContext, tmp_path: Path, editors: list[Editor] | None = None, **kw: Any
+) -> tuple[ProjectsService, Spawned, Path]:
+    root = tmp_path / "root"
+    (root / "a").mkdir(parents=True)
+    (root / "a" / "pyproject.toml").write_text("", encoding="utf-8")
+    if editors is not None:
+        ctx._get_editors = lambda: editors  # noqa: SLF001
+    spawned = Spawned()
+    svc = configured(ctx, root, spawner=spawned, wt_finder=lambda: None, **kw)
+    return svc, spawned, root / "a"
+
+
+def vscode(tmp_path: Path) -> Editor:
+    exe = tmp_path / "Code.exe"
+    exe.write_text("", encoding="utf-8")
+    return Editor(id="vscode", name="VS Code", exe=str(exe), args=["{path}"])
+
+
+def test_open_in_passes_project_path(ctx: ToolContext, tmp_path: Path) -> None:
+    ed = vscode(tmp_path)
+    svc, spawned, a = launch_service(ctx, tmp_path, [ed])
+    svc.invoke("open_in", {"path": str(a), "editor_id": "vscode"})
+    assert spawned.calls == [([ed.exe, str(a)], None)]
+
+
+def test_open_in_missing_exe_or_unknown_editor(ctx: ToolContext, tmp_path: Path) -> None:
+    ed = Editor(id="vscode", name="VS Code", exe=str(tmp_path / "absent.exe"), args=["{path}"])
+    svc, spawned, a = launch_service(ctx, tmp_path, [ed])
+    for editor_id in ("vscode", "other"):
+        with pytest.raises(ToolError) as exc:
+            svc.invoke("open_in", {"path": str(a), "editor_id": editor_id})
+        assert exc.value.code == "editor_missing"
+    assert spawned.calls == []
+
+
+def test_open_in_removed_project_is_not_a_project(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path, [vscode(tmp_path)])
+    shutil.rmtree(a)
+    with pytest.raises(ToolError) as exc:
+        svc.invoke("open_in", {"path": str(a), "editor_id": "vscode"})
+    assert exc.value.code == "not_a_project"
+    assert spawned.calls == []
+
+
+def test_launch_actions_refuse_unknown_path(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, _a = launch_service(ctx, tmp_path)
+    other = str(tmp_path / "elsewhere")
+    for name, args in (
+        ("open_in", {"editor_id": "x"}),
+        ("open_explorer", {}),
+        ("open_terminal", {}),
+        ("get_build", {}),
+        ("set_build", {"command": "x"}),
+        ("run_build", {}),
+        ("open_repo_page", {}),
+    ):
+        with pytest.raises(ToolError) as exc:
+            svc.invoke(name, {"path": other, **args})
+        assert exc.value.code == "not_a_project", name
+    assert spawned.calls == []
+
+
+def test_open_explorer_and_terminal(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    svc.invoke("open_explorer", {"path": str(a)})
+    svc.invoke("open_terminal", {"path": str(a)})
+    assert spawned.calls[0] == (["explorer.exe", str(a)], None)
+    assert spawned.calls[1][0][:3] == ["powershell", "-NoExit", "-Command"]
+
+
+def test_open_terminal_prefers_wt(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    svc._wt_finder = lambda: "wt.exe"  # noqa: SLF001
+    svc.invoke("open_terminal", {"path": str(a)})
+    assert spawned.calls == [(["wt.exe", "-d", str(a)], a)]
+
+
+def test_build_saved_suggested_and_cleared(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    assert svc.invoke("get_build", {"path": str(a)}) == {"command": None, "suggested": None}
+    command = 'npm run build -- --mode "prod x"'
+    info = svc.invoke("set_build", {"path": str(a), "command": f"  {command}  "})
+    assert info == {"command": command, "suggested": None}
+    svc.invoke("run_build", {"path": str(a)})
+    assert spawned.calls[-1][0][-1].endswith(f"; {command}")
+    assert svc.invoke("set_build", {"path": str(a), "command": "  "})["command"] is None
+    with pytest.raises(ToolError) as exc:
+        svc.invoke("run_build", {"path": str(a)})
+    assert exc.value.code == "no_build_command"
+
+
+def test_set_build_empty_returns_to_suggestion(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    (a / "uv.lock").write_text("", encoding="utf-8")
+    svc.invoke("set_build", {"path": str(a), "command": "make"})
+    info = svc.invoke("set_build", {"path": str(a), "command": ""})
+    assert info == {"command": None, "suggested": "uv build"}
+    svc.invoke("run_build", {"path": str(a)})
+    assert spawned.calls[-1][0][-1].endswith("; uv build")
+
+
+def test_get_editors_marks_availability(ctx: ToolContext, tmp_path: Path) -> None:
+    ed = vscode(tmp_path)
+    absent = str(tmp_path / "absent.exe")
+    eds = [ed, Editor(id="kiro", name="Kiro", exe=absent)]
+    svc, _s, _a = launch_service(ctx, tmp_path, eds)
+    assert svc.invoke("get_editors", {}) == [
+        {"id": "vscode", "name": "VS Code", "exe": ed.exe, "available": True},
+        {"id": "kiro", "name": "Kiro", "exe": absent, "available": False},
+    ]
+
+
+def test_open_repo_page(ctx: ToolContext, tmp_path: Path) -> None:
+    opened: list[str] = []
+    root = tmp_path / "root"
+    a = make_git_project(root, "a")
+    git(a, "remote", "add", "origin", "git@github.com:x/a.git")
+    b = make_git_project(root, "b")
+    (root / "c").mkdir()
+    (root / "c" / "pyproject.toml").write_text("", encoding="utf-8")
+    svc = configured(ctx, root, opener=lambda u: opened.append(u) or True)
+    svc.invoke("open_repo_page", {"path": str(a)})
+    assert opened == ["https://github.com/x/a"]
+    with pytest.raises(ToolError) as exc:
+        svc.invoke("open_repo_page", {"path": str(b)})
+    assert exc.value.code == "invalid_url"
+    with pytest.raises(ToolError) as exc2:
+        svc.invoke("open_repo_page", {"path": str(root / "c")})
+    assert exc2.value.code == "not_a_repo"
+
+
+def test_open_repo_page_failed_open(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    a = make_git_project(root, "a")
+    git(a, "remote", "add", "origin", "https://github.com/x/a.git")
+    svc = configured(ctx, root, opener=lambda _u: False)
+    with pytest.raises(ToolError) as exc:
+        svc.invoke("open_repo_page", {"path": str(a)})
+    assert exc.value.code == "launch_failed"

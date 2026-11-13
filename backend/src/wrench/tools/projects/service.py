@@ -3,6 +3,7 @@ associated remote repository. The long work runs in the background; the front po
 
 import os
 import threading
+import webbrowser
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,12 +12,15 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from wrench.sdk import ToolContext, ToolError, ToolService, action
+from wrench.shared.editors import command_for, exe_exists
 from wrench.shared.git import ops
 from wrench.shared.git.jobs import RepoJobs
 from wrench.shared.git.ops import GitOpError
 from wrench.shared.git.remote import web_url
 from wrench.shared.git.runner import GitNotFound, find_git
 from wrench.shared.git.status import RepoStatus, read_status
+from wrench.tools.projects.build import suggest_build
+from wrench.tools.projects.launch import Spawner, find_wt, spawn, terminal_args
 from wrench.tools.projects.scan import FolderEntry, ProjectEntry, flatten, scan
 
 DEFAULT_MAX_DEPTH = 4
@@ -49,6 +53,18 @@ class State(BaseModel):
     tree: FolderEntry | None
     git: dict[str, GitView]
     creation: None = None  # the creation view arrives with the template task
+
+
+class BuildInfo(BaseModel):
+    command: str | None
+    suggested: str | None
+
+
+class EditorView(BaseModel):
+    id: str
+    name: str
+    exe: str
+    available: bool
 
 
 @dataclass
@@ -94,9 +110,19 @@ def _read(path: Path) -> tuple[RepoStatus | None, dict[str, str] | None]:
 
 
 class ProjectsService(ToolService):
-    def __init__(self, ctx: ToolContext, git_finder: Callable[[], str] = find_git) -> None:
+    def __init__(
+        self,
+        ctx: ToolContext,
+        git_finder: Callable[[], str] = find_git,
+        spawner: Spawner = spawn,
+        wt_finder: Callable[[], str | None] = find_wt,
+        opener: Callable[[str], bool] = webbrowser.open,
+    ) -> None:
         super().__init__(ctx)
         self._git_finder = git_finder
+        self._spawner = spawner
+        self._wt_finder = wt_finder
+        self._opener = opener
         self._jobs = RepoJobs(max_workers=STATUS_WORKERS)
         self._lock = threading.Lock()
         self._started = False
@@ -205,6 +231,22 @@ class ProjectsService(ToolService):
         if entry is None:
             raise ToolError("not_a_project", f"Not a project of the inventory: {path}")
         return entry
+
+    def _folder(self, path: str) -> Path:
+        """The folder of a project that is still on disk; not_a_project otherwise."""
+        folder = Path(self._project(path).path)
+        if not folder.is_dir():
+            raise ToolError("not_a_project", f"The project folder no longer exists: {path}")
+        return folder
+
+    def _build_info(self, folder: Path) -> BuildInfo:
+        builds = self.ctx.storage.load().get("builds")
+        saved = builds.get(_key(folder)) if isinstance(builds, dict) else None
+        command = saved if isinstance(saved, str) and saved.strip() else None
+        return BuildInfo(command=command, suggested=suggest_build(folder))
+
+    def _open_terminal(self, folder: Path, command: str | None) -> None:
+        self._spawner(terminal_args(folder, command, self._wt_finder()), folder)
 
     def _repo(self, entry: ProjectEntry) -> _Repo:
         key = _key(entry.path)
@@ -368,6 +410,73 @@ class ProjectsService(ToolService):
         with self._lock:
             repo.error = None
         return self._state()
+
+    # --- open, terminal, build -----------------------------------------------------
+
+    @action
+    def get_editors(self) -> list[EditorView]:
+        return [
+            EditorView(id=e.id, name=e.name, exe=e.exe, available=exe_exists(e))
+            for e in self.ctx.editors()
+        ]
+
+    @action
+    def open_in(self, path: str, editor_id: str) -> None:
+        folder = self._folder(path)
+        editor = next((e for e in self.ctx.editors() if e.id == editor_id), None)
+        if editor is None or not exe_exists(editor):
+            raise ToolError("editor_missing", f"Editor not found: {editor_id}")
+        self._spawner(command_for(editor, folder), None)
+
+    @action
+    def open_explorer(self, path: str) -> None:
+        self._spawner(["explorer.exe", str(self._folder(path))], None)
+
+    @action
+    def open_terminal(self, path: str) -> None:
+        self._open_terminal(self._folder(path), None)
+
+    @action
+    def open_repo_page(self, path: str) -> None:
+        """Opens the remote page of the project's own repository in the default browser."""
+        repo = self._git_repo(path)
+        with self._lock:
+            status = repo.status
+        if status is None:
+            status, _error = _read(repo.path)
+        url = web_url(status.remote_url) if status else None
+        if url is None or not url.startswith("https://"):
+            raise ToolError("invalid_url", "This project has no usable remote address")
+        if not self._opener(url):
+            raise ToolError("launch_failed", "The browser could not be opened")
+
+    @action
+    def get_build(self, path: str) -> BuildInfo:
+        return self._build_info(self._folder(path))
+
+    @action
+    def set_build(self, path: str, command: str) -> BuildInfo:
+        folder = self._folder(path)
+        data = self.ctx.storage.load()
+        raw = data.get("builds")
+        builds: dict[str, str] = dict(raw) if isinstance(raw, dict) else {}
+        if command.strip():
+            builds[_key(folder)] = command.strip()
+        else:
+            builds.pop(_key(folder), None)
+        data["builds"] = builds
+        self.ctx.storage.save(data)
+        return self._build_info(folder)
+
+    @action
+    def run_build(self, path: str) -> None:
+        """Runs the saved (else suggested) command in the user's own new terminal window."""
+        folder = self._folder(path)
+        info = self._build_info(folder)
+        command = info.command or info.suggested
+        if command is None:
+            raise ToolError("no_build_command", "No build command is saved or suggested")
+        self._open_terminal(folder, command)
 
 
 SERVICE = ProjectsService
