@@ -269,6 +269,15 @@ def test_get_app_icon_none(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     assert api.get_app_icon("x.exe") == {"ok": True, "data": None}
 
 
+def test_get_app_icon_retries_after_none(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    answers: list[bytes | None] = [None, b"PNG"]
+    calls: list[str] = []
+    monkeypatch.setattr("wrench.api.icon_png", lambda t: calls.append(t) or answers.pop(0))
+    assert api.get_app_icon("x.exe") == {"ok": True, "data": None}
+    assert api.get_app_icon("x.exe") == {"ok": True, "data": "data:image/png;base64,UE5H"}
+    assert calls == ["x.exe", "x.exe"]
+
+
 def test_save_settings_rejects_editor_without_name(api: Api) -> None:
     r = api.save_settings({"editors": [{"id": "a", "exe": "a.exe"}]})
     assert r["error"]["code"] == "invalid_settings"

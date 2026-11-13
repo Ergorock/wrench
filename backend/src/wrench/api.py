@@ -52,7 +52,7 @@ class Api:
         self._updater = updater
         self._lock = threading.Lock()
         self._window: Any = None
-        self._icons: dict[str, str | None] = {}
+        self._icons: dict[str, str] = {}
 
     def _current(self) -> Settings:
         with self._lock:
@@ -208,17 +208,17 @@ class Api:
         return self._envelope(run)
 
     def get_app_icon(self, exe: str) -> dict[str, Any]:
-        """PNG data URL of an application's icon, or None; cached per process."""
+        """PNG data URL of an application's icon, or None; successes cached per process."""
 
         def run() -> str | None:
-            if exe not in self._icons:
-                png = icon_png(exe)
-                self._icons[exe] = (
-                    None
-                    if png is None
-                    else "data:image/png;base64," + base64.b64encode(png).decode()
-                )
-            return self._icons[exe]
+            if exe in self._icons:
+                return self._icons[exe]
+            png = icon_png(exe)
+            if png is None:
+                return None
+            url = "data:image/png;base64," + base64.b64encode(png).decode()
+            self._icons[exe] = url
+            return url
 
         return self._envelope(run)
 
