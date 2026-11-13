@@ -35,6 +35,7 @@ let build: { command: string | null; suggested: string | null }
 let reqViews: RequirementsView[]
 let reqFail = false
 let reqChecked = false
+let templates: string[]
 let app: App | null
 let host: HTMLElement
 
@@ -76,6 +77,8 @@ function installApi(): void {
           if (reqFail) return { ok: false, error: { code: 'boom', message: 'down' } }
           return { ok: true, data: reqViews.length > 1 ? reqViews.shift() : reqViews[0] }
         }
+        if (action === 'clear_creation') return { ok: true, data: { ...current, creation: null } }
+        if (action === 'list_templates') return { ok: true, data: templates }
         if (action === 'get_build') return { ok: true, data: build }
         if (action === 'set_build' && setBuildGate) await setBuildGate
         if (action === 'set_build') return { ok: true, data: { command: payload?.command, suggested: build.suggested } }
@@ -107,6 +110,7 @@ beforeEach(() => {
   picked = 'C:\\Dev'
   build = { command: null, suggested: 'npm run build' }
   setBuildGate = null
+  templates = ['Basic', 'Node app']
   reqViews = [{ running: false, items: null, error: null }]
   reqFail = false
   reqChecked = false
@@ -601,5 +605,99 @@ describe('ProjectsTool, fiche : prérequis', () => {
       await vi.advanceTimersByTimeAsync(3500)
       expect(toasts.value).toHaveLength(1)
     })
+  })
+})
+
+describe('ProjectsTool, nouveau projet', () => {
+  const dialog = () => host.querySelector('[role="dialog"]') as HTMLElement | null
+  const type = async (el: HTMLInputElement, value: string) => {
+    el.value = value
+    el.dispatchEvent(new Event('input'))
+    await settle()
+  }
+  const submit = () => dialog()?.querySelector('button[type="submit"]') as HTMLButtonElement
+  const open = async () => {
+    button('New project')?.click()
+    await settle()
+  }
+  const fields = () => ({
+    name: dialog()?.querySelector('#projects-new-name') as HTMLInputElement,
+    url: dialog()?.querySelector('#projects-new-url') as HTMLInputElement,
+  })
+
+  it('liste les modèles, affiche la destination en lecture seule', async () => {
+    await mountTool()
+    await open()
+    expect(calls.some((c) => c.action === 'list_templates')).toBe(true)
+    expect(dialog()?.textContent).toContain('Basic')
+    expect(dialog()?.textContent).toContain('Node app')
+    const dest = dialog()?.querySelector('[data-slot="destination"]') as HTMLInputElement
+    expect(dest.value).toBe('Dev')
+    expect(dest.readOnly).toBe(true)
+  })
+
+  it('le bouton reste inactif : nom vide, URL ftp://x', async () => {
+    await mountTool()
+    await open()
+    expect(submit().disabled).toBe(true)
+    await type(fields().name, 'New')
+    expect(submit().disabled).toBe(false)
+    await type(fields().url, 'ftp://x')
+    expect(submit().disabled).toBe(true)
+    await type(fields().url, 'https://github.com/a/b.git')
+    expect(submit().disabled).toBe(false)
+  })
+
+  it('l’envoi appelle create_project avec modèle, nom, dossier courant et URL', async () => {
+    await mountTool()
+    ;(host.querySelector('.folder, [data-folder]') as HTMLElement | null)?.click()
+    await settle()
+    await open()
+    ;(dialog()?.querySelector('input[type="radio"][value="Node app"]') as HTMLInputElement).click()
+    await type(fields().name, ' New ')
+    await type(fields().url, 'https://github.com/a/b.git')
+    submit().click()
+    await settle()
+    expect(calls.find((c) => c.action === 'create_project')?.payload).toEqual({
+      template: 'Node app',
+      name: 'New',
+      parent_rel: 'M3',
+      remote_url: 'https://github.com/a/b.git',
+    })
+  })
+
+  it('sans URL, remote_url vaut null', async () => {
+    await mountTool()
+    await open()
+    await type(fields().name, 'New')
+    submit().click()
+    await settle()
+    expect(calls.find((c) => c.action === 'create_project')?.payload).toMatchObject({ parent_rel: '', remote_url: null })
+  })
+
+  it('quand creation.created arrive : la fenêtre se ferme et le nouveau projet est sélectionné', async () => {
+    const fresh = project('Fresh', 'Fresh')
+    const created = { ...baseState, tree: { ...tree, projects: [...tree.projects, fresh], project_count: 3 } }
+    await mountTool()
+    await open()
+    await type(fields().name, 'Fresh')
+    current = { ...created, creation: { running: false, error: null, created: fresh.path } }
+    submit().click()
+    await settle()
+    expect(dialog()).toBeNull()
+    expect(host.querySelector('[data-slot="detail"]')?.textContent).toContain('Fresh')
+    expect(calls.some((c) => c.action === 'clear_creation')).toBe(true)
+  })
+
+  it('une erreur de création garde la fenêtre ouverte et affiche un toast', async () => {
+    toasts.value = []
+    await mountTool()
+    await open()
+    await type(fields().name, 'Fresh')
+    current = { ...baseState, creation: { running: false, error: { code: 'copy_failed', message: 'x' }, created: null } }
+    submit().click()
+    await settle()
+    expect(dialog()).not.toBeNull()
+    expect(toasts.value).toHaveLength(1)
   })
 })

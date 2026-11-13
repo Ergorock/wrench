@@ -5,6 +5,7 @@ import {
   findFolder,
   findProject,
   gitBadges,
+  isRemoteUrl,
   needsTemplateConfirm,
   normalize,
   requirementIcon,
@@ -128,4 +129,17 @@ describe('requirements', () => {
       for (const json of [enTool, frTool]) expect(json.requirements.status[s]).toEqual(expect.any(String))
     }
   })
+})
+
+describe('isRemoteUrl', () => {
+  it.each([
+    'https://github.com/a/b.git',
+    'ssh://git@host:2222/a/b',
+    'git@github.com:a/b.git',
+  ])('accepte %s', (u) => expect(isRemoteUrl(u)).toBe(true))
+
+  it.each(['', 'ftp://x/y', 'https://host', 'https://host/', '-https://a/b', 'https://a/b c', 'C:/repos/x', 'host:path', 'https://h:99999/p'])(
+    'refuse %j',
+    (u) => expect(isRemoteUrl(u)).toBe(false),
+  )
 })

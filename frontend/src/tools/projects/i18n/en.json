@@ -4,7 +4,8 @@
   "toolbar": {
     "search": "Search a project…",
     "refresh": "Refresh",
-    "settings": "Settings"
+    "settings": "Settings",
+    "newProject": "New project"
   },
   "breadcrumb": "Location",
   "folder": {
@@ -99,6 +100,24 @@
     "launch_failed": "The program could not be started.",
     "git_not_found": "git was not found on this computer.",
     "busy": "An operation is already running on this project.",
-    "scan_failed": "The scan failed."
+    "scan_failed": "The scan failed.",
+    "templates_missing": "The templates folder or this template was not found.",
+    "invalid_name": "This name is not valid for a Windows folder.",
+    "target_exists": "A project with this name already exists in this folder.",
+    "invalid_url": "This repository address is not valid.",
+    "remote_exists": "This repository already has an origin.",
+    "copy_failed": "The copy of the template failed."
+  },
+  "new": {
+    "title": "New project",
+    "template": "Template",
+    "noTemplates": "No template found in the templates folder.",
+    "name": "Name",
+    "url": "Repository URL (optional)",
+    "destination": "Destination",
+    "create": "Create",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "noGit": "git was not found: the project will be created without a repository."
   }
 }

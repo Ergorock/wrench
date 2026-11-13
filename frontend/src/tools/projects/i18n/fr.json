@@ -4,7 +4,8 @@
   "toolbar": {
     "search": "Rechercher un projet…",
     "refresh": "Actualiser",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "newProject": "Nouveau projet"
   },
   "breadcrumb": "Emplacement",
   "folder": {
@@ -99,6 +100,24 @@
     "launch_failed": "Le programme n’a pas pu être lancé.",
     "git_not_found": "git est introuvable sur cet ordinateur.",
     "busy": "Une opération est déjà en cours sur ce projet.",
-    "scan_failed": "L’analyse a échoué."
+    "scan_failed": "L’analyse a échoué.",
+    "templates_missing": "Le dossier des modèles ou ce modèle est introuvable.",
+    "invalid_name": "Ce nom n’est pas valide pour un dossier Windows.",
+    "target_exists": "Un projet de ce nom existe déjà dans ce dossier.",
+    "invalid_url": "Cette adresse de dépôt n’est pas valide.",
+    "remote_exists": "Ce dépôt a déjà un origin.",
+    "copy_failed": "La copie du modèle a échoué."
+  },
+  "new": {
+    "title": "Nouveau projet",
+    "template": "Modèle",
+    "noTemplates": "Aucun modèle dans le dossier des modèles.",
+    "name": "Nom",
+    "url": "URL du dépôt (facultative)",
+    "destination": "Destination",
+    "create": "Créer",
+    "creating": "Création…",
+    "cancel": "Annuler",
+    "noGit": "git est introuvable : le projet sera créé sans dépôt."
   }
 }

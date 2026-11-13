@@ -71,3 +71,22 @@ const REQUIREMENT_ICONS: Record<RequirementStatus, string> = {
 /** Name of the icon of a requirement status (the panel maps it to a component). */
 export const requirementIcon = (s: RequirementStatus): string => REQUIREMENT_ICONS[s]
 export const requirementLabelKey = (s: RequirementStatus): string => `tools.projects.requirements.status.${s}`
+
+// Same rule as is_remote_url in the backend (wrench/shared/git/remote.py).
+const SCP = /^(?:([^@/\\\s]+)@)?([^@/\\:\s]{2,}):(?!\/\/)(.+)$/
+const trimSlashes = (s: string): string => s.replace(/^\/+|\/+$/g, '')
+/** `https://host/path`, `ssh://[user@]host[:port]/path` or `user@host:path`. */
+export function isRemoteUrl(url: string): boolean {
+  if (!url || url.startsWith('-') || /[\s\x00-\x1f\x7f]/.test(url)) return false
+  if (!url.includes('://')) {
+    const m = SCP.exec(url)
+    return !!m && !!m[1] && trimSlashes(m[3]) !== ''
+  }
+  try {
+    const u = new URL(url)
+    const scheme = u.protocol.slice(0, -1)
+    return (scheme === 'https' || scheme === 'ssh') && u.hostname !== '' && trimSlashes(u.pathname) !== ''
+  } catch {
+    return false
+  }
+}

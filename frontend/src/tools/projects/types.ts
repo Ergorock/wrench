@@ -29,13 +29,19 @@ export interface Config {
 /** The git state of a project; `running` is a free operation name (status, commit, push…). */
 export type GitView = Omit<RepoView, 'running'> & { running: string | null }
 
+export interface CreationView {
+  running: boolean
+  error: { code: string; message: string } | null
+  created: string | null
+}
+
 export interface State {
   scanning: boolean
   scan_error: { code: string; message: string } | null
   git_available: boolean
   tree: FolderEntry | null
   git: Record<string, GitView>
-  creation: null
+  creation: CreationView | null
 }
 
 export interface BuildInfo {

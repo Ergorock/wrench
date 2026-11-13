@@ -16,13 +16,14 @@ from wrench.shared.editors import command_for, exe_exists
 from wrench.shared.git import ops
 from wrench.shared.git.jobs import RepoJobs
 from wrench.shared.git.ops import GitOpError
-from wrench.shared.git.remote import web_url
+from wrench.shared.git.remote import is_remote_url, web_url
 from wrench.shared.git.runner import GitNotFound, find_git
 from wrench.shared.git.status import RepoStatus, read_status
 from wrench.tools.projects.build import suggest_build
 from wrench.tools.projects.launch import Spawner, find_wt, spawn, terminal_args
 from wrench.tools.projects.requirements import Requirement, Runner, check, run_version
-from wrench.tools.projects.scan import FolderEntry, ProjectEntry, flatten, scan
+from wrench.tools.projects.scan import FolderEntry, ProjectEntry, flatten, scan, techs_of
+from wrench.tools.projects.templates import copy_template, validate_name
 
 DEFAULT_MAX_DEPTH = 4
 MIN_DEPTH = 1
@@ -47,13 +48,19 @@ class GitView(RepoStatus):
     error: dict[str, str] | None
 
 
+class CreationView(BaseModel):
+    running: bool
+    error: dict[str, str] | None
+    created: str | None  # path of the new project
+
+
 class State(BaseModel):
     scanning: bool
     scan_error: dict[str, str] | None
     git_available: bool
     tree: FolderEntry | None
     git: dict[str, GitView]
-    creation: None = None  # the creation view arrives with the template task
+    creation: CreationView | None
 
 
 class BuildInfo(BaseModel):
@@ -143,6 +150,7 @@ class ProjectsService(ToolService):
         self._git_projects: set[str] = set()  # inventory entries that have a `.git`
         self._repos: dict[str, _Repo] = {}  # git state cache
         self._requirements: dict[str, RequirementsView] = {}  # kept for the process lifetime
+        self._creation: CreationView | None = None
 
     # --- configuration -------------------------------------------------------------
 
@@ -281,6 +289,7 @@ class ProjectsService(ToolService):
         with self._lock:
             repos = [(k, r.path, r.entry, r.status, r.error) for k, r in self._repos.items()]
             scanning, scan_error, tree = self._scanning, self._scan_error, self._tree
+            creation = self._creation
         views: dict[str, GitView] = {}
         for key, path, entry, repo_status, repo_error in repos:
             job = self._jobs.state(key)
@@ -300,6 +309,7 @@ class ProjectsService(ToolService):
             git_available=self._git_available(),
             tree=tree,
             git=views,
+            creation=creation,
         )
 
     def _refresh(self, key: str, path: Path) -> None:
@@ -523,6 +533,122 @@ class ProjectsService(ToolService):
         with self._lock:
             view = self._requirements.get(key)
         return view or RequirementsView(running=False, items=None, error=None)
+
+    # --- creation from a template --------------------------------------------------
+
+    def _templates_dir(self) -> Path:
+        templates = self._config()[1]
+        if templates is None or not Path(templates).is_dir():
+            raise ToolError("templates_missing", "The templates folder was not found")
+        return Path(templates)
+
+    @action
+    def list_templates(self) -> list[str]:
+        folder = self._templates_dir()
+        try:
+            names = [e.name for e in folder.iterdir() if e.is_dir()]
+        except OSError as exc:
+            raise ToolError("templates_missing", str(exc)) from exc
+        return sorted(names, key=str.casefold)
+
+    def _chain(self, parent_rel: str) -> list[FolderEntry]:
+        """The folders from the root down to `parent_rel` ("" is the root); not_a_project
+        when it is not a folder of the inventory. The caller holds the lock."""
+        node = self._tree
+        if node is None:
+            raise ToolError("not_a_project", "No inventory yet")
+        chain = [node]
+        for part in parent_rel.split(os.sep) if parent_rel else []:
+            node = next((f for f in node.folders if f.name == part), None)
+            if node is None:
+                raise ToolError("not_a_project", f"Not a folder of the inventory: {parent_rel}")
+            chain.append(node)
+        return chain
+
+    @action
+    def create_project(
+        self, template: str, name: str, parent_rel: str, remote_url: str | None
+    ) -> State:
+        """Validates synchronously, then copies in the background (see State.creation)."""
+        validate_name(name)
+        url = remote_url.strip() if remote_url and remote_url.strip() else None
+        if url is not None and not is_remote_url(url):
+            raise ToolError("invalid_url", "Not a valid remote URL")
+        if template not in self.list_templates():
+            raise ToolError("templates_missing", f"Template not found: {template}")
+        with self._lock:
+            parent = Path(self._chain(parent_rel)[-1].path)
+        if not parent.is_dir():
+            raise ToolError("not_a_project", f"The folder no longer exists: {parent_rel}")
+        target = parent / name
+        if os.path.lexists(target):
+            raise ToolError("target_exists", f"{name} already exists in this folder")
+        with self._lock:
+            if self._creation is not None and self._creation.running:
+                raise ToolError("busy", "A creation is already running")
+            self._creation = CreationView(running=True, error=None, created=None)
+        threading.Thread(
+            target=self._create,
+            args=(self._templates_dir() / template, target, parent_rel, url),
+            name="projects-create",
+            daemon=True,
+        ).start()
+        return self._state()
+
+    def _create(self, src: Path, target: Path, parent_rel: str, url: str | None) -> None:
+        error: dict[str, str] | None = None
+        created: str | None = None
+        try:
+            copy_template(src, target)
+            created = str(target)
+            if self._git_available():
+                try:
+                    ops.init_repo(target)
+                    if url is not None:
+                        ops.add_origin(target, url)
+                except GitOpError as exc:
+                    error = {"code": exc.code, "message": exc.message}
+            self._insert(target, parent_rel)
+        except ToolError as exc:
+            error = {"code": exc.code, "message": exc.message}
+        except Exception as exc:
+            self.ctx.logger.exception("Project creation failed")
+            error = {"code": "copy_failed", "message": str(exc)}
+        with self._lock:
+            self._creation = CreationView(running=False, error=error, created=created)
+
+    def _insert(self, target: Path, parent_rel: str) -> None:
+        """Adds the new project to the in-memory inventory, without a rescan."""
+        rel = f"{parent_rel}{os.sep}{target.name}" if parent_rel else target.name
+        entry = ProjectEntry(
+            name=target.name,
+            path=str(target),
+            rel_path=rel,
+            techs=techs_of(target),
+            is_template=False,
+        )
+        with self._lock:
+            if self._scanning:
+                self._rescan_again = True  # a scan begun before the copy would drop it
+            try:
+                chain = self._chain(parent_rel)
+            except ToolError:
+                return  # the inventory changed meanwhile: the next scan will find it
+            chain[-1].projects.append(entry)
+            chain[-1].projects.sort(key=lambda p: p.name.casefold())
+            for folder in chain:
+                folder.project_count += 1
+            key = _key(target)
+            self._projects[key] = entry
+            if (target / ".git").exists():
+                self._git_projects.add(key)
+
+    @action
+    def clear_creation(self) -> State:
+        with self._lock:
+            if self._creation is not None and not self._creation.running:
+                self._creation = None
+        return self._state()
 
 
 SERVICE = ProjectsService

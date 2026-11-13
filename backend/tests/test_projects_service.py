@@ -516,3 +516,127 @@ def test_requirements_refuse_unknown_path(ctx: ToolContext, tmp_path: Path) -> N
         with pytest.raises(ToolError) as exc:
             svc.invoke(name, {"path": str(tmp_path / "elsewhere")})
         assert exc.value.code == "not_a_project", name
+
+
+# --- creation from a template ------------------------------------------------------
+
+
+def make_templates(tmp_path: Path) -> Path:
+    tpl = tmp_path / "tpls"
+    (tpl / "Basic" / ".git").mkdir(parents=True)
+    (tpl / "Basic" / ".git" / "HEAD").write_text("x", "utf-8")
+    (tpl / "Basic" / "README.md").write_text("# t", "utf-8")
+    (tpl / "Alpha").mkdir()
+    return tpl
+
+
+def creating(ctx: ToolContext, root: Path, tpl: Path, **kw: Any) -> ProjectsService:
+    svc = ProjectsService(ctx, **kw)
+    svc.invoke("set_config", {"root": str(root), "templates_dir": str(tpl), "max_depth": 4})
+    settled(svc)
+    return svc
+
+
+def created(svc: ProjectsService) -> dict[str, Any]:
+    wait_until(lambda: svc.invoke("get_state", {})["creation"]["running"] is False)
+    state: dict[str, Any] = svc.invoke("get_state", {})
+    return state
+
+
+def test_list_templates(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    root.mkdir()
+    svc = creating(ctx, root, make_templates(tmp_path))
+    assert svc.invoke("list_templates", {}) == ["Alpha", "Basic"]
+    svc.invoke(
+        "set_config", {"root": str(root), "templates_dir": str(tmp_path / "no"), "max_depth": 4}
+    )
+    with pytest.raises(ToolError) as e:
+        svc.invoke("list_templates", {})
+    assert e.value.code == "templates_missing"
+
+
+def test_create_project(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    (root / "perso").mkdir(parents=True)
+    (root / "perso" / "x" / ".git").mkdir(parents=True)
+    svc = creating(ctx, root, make_templates(tmp_path))
+    url = "https://example.com/me/new.git"
+    svc.invoke(
+        "create_project",
+        {"template": "Basic", "name": "New", "parent_rel": "perso", "remote_url": url},
+    )
+    state = created(svc)
+    assert state["creation"]["error"] is None
+    target = root / "perso" / "New"
+    assert state["creation"]["created"] == str(target)
+    assert (target / ".git").is_dir()
+    assert git(target, "remote", "get-url", "origin").strip() == url
+    perso = next(f for f in state["tree"]["folders"] if f["name"] == "perso")
+    assert [p["name"] for p in perso["projects"]] == ["New", "x"]
+    assert perso["project_count"] == 2
+    assert state["tree"]["project_count"] == 2
+    # The new project is a known project: its actions work without a rescan.
+    svc.invoke("get_build", {"path": str(target)})
+    svc.invoke("clear_creation", {})
+    assert svc.invoke("get_state", {})["creation"] is None
+
+
+def test_create_at_root_and_without_git(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    root.mkdir()
+
+    def no_git() -> str:
+        raise GitNotFound("no git")
+
+    svc = creating(ctx, root, make_templates(tmp_path), git_finder=no_git)
+    svc.invoke(
+        "create_project", {"template": "Basic", "name": "N", "parent_rel": "", "remote_url": None}
+    )
+    state = created(svc)
+    assert state["creation"]["error"] is None
+    assert not (root / "N" / ".git").exists()
+    assert (root / "N" / "README.md").is_file()
+    assert [p["name"] for p in state["tree"]["projects"]] == ["N"]
+
+
+def test_create_refusals(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    (root / "Taken").mkdir(parents=True)
+    svc = creating(ctx, root, make_templates(tmp_path))
+
+    def refused(**kw: Any) -> str:
+        args = {"template": "Basic", "name": "N", "parent_rel": "", "remote_url": None, **kw}
+        with pytest.raises(ToolError) as e:
+            svc.invoke("create_project", args)
+        return e.value.code
+
+    assert refused(name="Taken") == "target_exists"
+    assert refused(name="a:b") == "invalid_name"
+    assert refused(remote_url="ftp://x") == "invalid_url"
+    assert refused(parent_rel="nope") == "not_a_project"
+    assert refused(template="..") == "templates_missing"
+    assert not (root / "N").exists()
+    assert svc.invoke("get_state", {})["creation"] is None
+
+
+def test_create_failure_reported(
+    ctx: ToolContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "dev"
+    root.mkdir()
+    svc = creating(ctx, root, make_templates(tmp_path))
+
+    def failing(_src: Path, dst: Path, **_kw: Any) -> None:
+        dst.mkdir()
+        raise OSError("boom")
+
+    monkeypatch.setattr(shutil, "copytree", failing)
+    svc.invoke(
+        "create_project", {"template": "Basic", "name": "N", "parent_rel": "", "remote_url": None}
+    )
+    state = created(svc)
+    assert state["creation"]["error"]["code"] == "copy_failed"
+    assert state["creation"]["created"] is None
+    assert not (root / "N").exists()
+    assert state["tree"]["projects"] == []

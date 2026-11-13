@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, FolderPlus, LoaderCircle, RefreshCw, Settings } from '@lucide/vue'
-import { pickFolder, toolCall } from '../../bridge/client'
+import { ChevronRight, FolderPlus, LoaderCircle, Plus, RefreshCw, Settings } from '@lucide/vue'
+import { BridgeError, pickFolder, toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
 import { toastError } from '../../shell/toasts'
 import ConfigDialog from './ConfigDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import FolderCard from './FolderCard.vue'
+import NewProjectDialog from './NewProjectDialog.vue'
 import ProjectCard from './ProjectCard.vue'
 import ProjectPanel from './ProjectPanel.vue'
 import { breadcrumb, byName, findFolder, findProject, needsTemplateConfirm, searchProjects } from './logic'
@@ -34,6 +35,8 @@ const selectedProject = computed<{ project: ProjectEntry; missing: boolean } | n
   return { project: { name, path: selected.value, rel_path: '', techs: [], is_template: false }, missing: true }
 })
 const configuring = ref(false)
+const newProject = ref(false)
+const creating = ref(false)
 const pendingOpen = ref<{ path: string; editorId: string } | null>(null)
 let pollFailed = false
 let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -54,7 +57,7 @@ const busy = computed(
   () =>
     !!state.value &&
     (state.value.scanning ||
-      state.value.creation !== null ||
+      state.value.creation?.running === true ||
       Object.values(state.value.git).some((g) => g.running !== null)),
 )
 
@@ -107,6 +110,44 @@ async function saveConfig(root: string | null, templatesDir: string | null, maxD
   relPath.value = ''
   await act('get_state')
 }
+
+async function createProject(template: string, name: string, remoteUrl: string | null): Promise<void> {
+  creating.value = true
+  try {
+    state.value = await tool.call<State>('create_project', {
+      template,
+      name,
+      parent_rel: current.value?.rel_path ?? '',
+      remote_url: remoteUrl,
+    })
+  } catch {
+    // useTool has already shown the error toast (invalid name, existing target…).
+    creating.value = false
+    return
+  }
+  schedulePoll()
+}
+
+// The background creation ended: close the dialog and show the new project, or keep the
+// dialog open with the error.
+watch(
+  () => state.value?.creation,
+  async (creation) => {
+    if (!creating.value || !creation || creation.running) return
+    creating.value = false
+    if (creation.error) toastError(new BridgeError(creation.error.code, creation.error.message), 'projects')
+    if (creation.created) {
+      newProject.value = false
+      const project = tree.value ? findProject(tree.value, creation.created) : null
+      // The dialog is modal: the folder it was opened from is still the one displayed.
+      if (project) {
+        query.value = ''
+        selected.value = project.path
+      }
+    }
+    await act('clear_creation')
+  },
+)
 
 async function chooseRoot(): Promise<void> {
   let folder: string | null
@@ -193,6 +234,10 @@ onUnmounted(() => {
             :placeholder="t(`${PREFIX}toolbar.search`)"
             :aria-label="t(`${PREFIX}toolbar.search`)"
           />
+          <button type="button" class="primary" @click="newProject = true">
+            <Plus :size="15" aria-hidden="true" />
+            {{ t(`${PREFIX}toolbar.newProject`) }}
+          </button>
           <button type="button" @click="act('rescan')">
             <RefreshCw :size="15" aria-hidden="true" />
             {{ t(`${PREFIX}toolbar.refresh`) }}
@@ -250,6 +295,14 @@ onUnmounted(() => {
       :message="t(`${PREFIX}confirm.template`)"
       @confirm="confirmOpen"
       @cancel="pendingOpen = null"
+    />
+    <NewProjectDialog
+      v-if="newProject"
+      :destination="crumbs.map((c) => c.name).join(' › ')"
+      :busy="creating"
+      :git-available="state?.git_available ?? true"
+      @submit="createProject"
+      @cancel="newProject = false"
     />
     <ConfigDialog v-if="configuring && config" :config="config" @save="saveConfig" @cancel="configuring = false" />
   </div>
