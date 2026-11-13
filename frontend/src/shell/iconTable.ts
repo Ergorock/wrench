@@ -8,6 +8,7 @@ import {
   GitFork,
   Keyboard,
   Monitor,
+  Terminal,
   Wrench,
   Zap,
 } from '@lucide/vue'
@@ -27,6 +28,7 @@ export const iconTable: Record<string, Component> = {
   'git-fork': GitFork,
   keyboard: Keyboard,
   monitor: Monitor,
+  terminal: Terminal,
   wrench: Wrench,
   zap: Zap,
 }

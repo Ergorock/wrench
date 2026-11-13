@@ -1,0 +1,32 @@
+{
+  "name": "Script launcher",
+  "description": "Run, with one click, the programs and scripts you have saved.",
+  "intro": "Only the commands you save can be run. No shell: arguments are passed as they are, one per line. Maximum run time: 60 seconds.",
+  "add": "New command",
+  "name": "Name",
+  "program": "Program",
+  "programHint": "Full path to an .exe, or the name of an .exe found on PATH. .bat, .cmd and .ps1 files are not run directly.",
+  "browse": "Browse…",
+  "args": "Arguments (one per line)",
+  "argsPlaceholder": "--verbose\nC:\\folder\\file.txt",
+  "cwd": "Working folder (optional)",
+  "save": "Save",
+  "cancel": "Cancel",
+  "empty": "No command saved yet.",
+  "inFolder": "in {folder}",
+  "run": "Run",
+  "running": "Running…",
+  "edit": "Edit",
+  "delete": "Delete",
+  "confirmDelete": "Confirm deletion",
+  "timedOut": "Timed out: the program was stopped after 60 seconds.",
+  "exitCode": "Exit code: {code}",
+  "errors": {
+    "unknown_command": "This command no longer exists.",
+    "invalid_command": "Give a name and a program.",
+    "folder_not_found": "This folder does not exist.",
+    "too_many_commands": "The list is full.",
+    "program_not_found": "Program not found. Check the path or PATH.",
+    "program_failed": "The program could not start."
+  }
+}
