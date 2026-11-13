@@ -111,13 +111,13 @@ async function saveConfig(root: string | null, templatesDir: string | null, maxD
   await act('get_state')
 }
 
-async function createProject(template: string, name: string, remoteUrl: string | null): Promise<void> {
+async function createProject(template: string, name: string, remoteUrl: string | null, parentRel: string): Promise<void> {
   creating.value = true
   try {
     state.value = await tool.call<State>('create_project', {
       template,
       name,
-      parent_rel: current.value?.rel_path ?? '',
+      parent_rel: parentRel,
       remote_url: remoteUrl,
     })
   } catch {
@@ -297,8 +297,9 @@ onUnmounted(() => {
       @cancel="pendingOpen = null"
     />
     <NewProjectDialog
-      v-if="newProject"
-      :destination="crumbs.map((c) => c.name).join(' › ')"
+      v-if="newProject && tree"
+      :tree="tree"
+      :initial="current?.rel_path ?? ''"
       :busy="creating"
       :git-available="state?.git_available ?? true"
       @submit="createProject"

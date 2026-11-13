@@ -29,6 +29,12 @@ export function breadcrumb(tree: FolderEntry, relPath: string): { name: string; 
   return crumbs
 }
 
+/** Every folder of the inventory, the root first then the others in tree order, by relative path. */
+export function folderOptions(tree: FolderEntry): { label: string; relPath: string }[] {
+  const walk = (f: FolderEntry): FolderEntry[] => byName(f.folders).flatMap((c) => [c, ...walk(c)])
+  return [{ label: tree.name, relPath: '' }, ...walk(tree).map((f) => ({ label: f.rel_path, relPath: f.rel_path }))]
+}
+
 function allProjects(folder: FolderEntry): ProjectEntry[] {
   return [...folder.projects, ...folder.folders.flatMap(allProjects)]
 }

@@ -637,15 +637,28 @@ describe('ProjectsTool, nouveau projet', () => {
     url: dialog()?.querySelector('#projects-new-url') as HTMLInputElement,
   })
 
-  it('liste les modèles, affiche la destination en lecture seule', async () => {
+  it('liste les modèles, propose les dossiers en destination (dossier affiché par défaut)', async () => {
     await mountTool()
     await open()
     expect(calls.some((c) => c.action === 'list_templates')).toBe(true)
     expect(dialog()?.textContent).toContain('Basic')
     expect(dialog()?.textContent).toContain('Node app')
-    const dest = dialog()?.querySelector('[data-slot="destination"]') as HTMLInputElement
-    expect(dest.value).toBe('Dev')
-    expect(dest.readOnly).toBe(true)
+    const dest = dialog()?.querySelector('[data-slot="destination"]') as HTMLSelectElement
+    expect([...dest.options].map((o) => o.textContent)).toEqual(['Dev', 'M3'])
+    expect(dest.value).toBe('')
+  })
+
+  it('le dossier choisi dans la liste est envoyé en parent_rel, « » pour la racine', async () => {
+    await mountTool()
+    await open()
+    const dest = () => dialog()?.querySelector('[data-slot="destination"]') as HTMLSelectElement
+    await type(fields().name, 'New')
+    dest().value = 'M3'
+    dest().dispatchEvent(new Event('change'))
+    await settle()
+    submit().click()
+    await settle()
+    expect(calls.find((c) => c.action === 'create_project')?.payload).toMatchObject({ parent_rel: 'M3' })
   })
 
   it('le bouton reste inactif : nom vide, URL ftp://x', async () => {

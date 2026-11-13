@@ -4,6 +4,7 @@ import {
   buildDraftChanged,
   findFolder,
   findProject,
+  folderOptions,
   gitBadges,
   isRemoteUrl,
   needsTemplateConfirm,
@@ -158,5 +159,22 @@ describe('projects errors i18n', () => {
   ])('chaque code d’erreur du backend est traduit (%s)', (_lang, tool) => {
     const errors = (tool as { errors: Record<string, string> }).errors
     expect(codes.filter((c) => !errors[c])).toEqual([])
+  })
+})
+
+describe('folderOptions', () => {
+  it('la racine d’abord, puis les dossiers triés dans l’ordre de l’arbre, accents conservés', () => {
+    const t = folder('Dev', '', [
+      folder('Zèbre', 'Zèbre', [], []),
+      folder('M3', 'M3', [folder('Liste', 'M3\Liste', [], [])], []),
+      folder('Éco', 'Éco', [], []),
+    ], [])
+    expect(folderOptions(t)).toEqual([
+      { label: 'Dev', relPath: '' },
+      { label: 'Éco', relPath: 'Éco' },
+      { label: 'M3', relPath: 'M3' },
+      { label: 'M3\Liste', relPath: 'M3\Liste' },
+      { label: 'Zèbre', relPath: 'Zèbre' },
+    ])
   })
 })

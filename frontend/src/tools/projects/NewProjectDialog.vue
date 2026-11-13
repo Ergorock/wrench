@@ -2,12 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTool } from '../../bridge/useTool'
-import { isRemoteUrl } from './logic'
+import { folderOptions, isRemoteUrl } from './logic'
+import type { FolderEntry } from './types'
 
 const PREFIX = 'tools.projects.new.'
 
-const props = defineProps<{ destination: string; busy: boolean; gitAvailable: boolean }>()
-const emit = defineEmits<{ submit: [template: string, name: string, remoteUrl: string | null]; cancel: [] }>()
+const props = defineProps<{ tree: FolderEntry; initial: string; busy: boolean; gitAvailable: boolean }>()
+const emit = defineEmits<{
+  submit: [template: string, name: string, remoteUrl: string | null, parentRel: string]
+  cancel: []
+}>()
 
 const { t } = useI18n()
 const tool = useTool('projects')
@@ -15,6 +19,8 @@ const templates = ref<string[]>([])
 const template = ref('')
 const name = ref('')
 const url = ref('')
+const destination = ref(props.initial)
+const options = computed(() => folderOptions(props.tree))
 const input = ref<HTMLInputElement | null>(null)
 
 const cleanName = computed(() => name.value.trim())
@@ -24,7 +30,7 @@ const valid = computed(
 )
 
 function submit(): void {
-  if (valid.value && !props.busy) emit('submit', template.value, cleanName.value, cleanUrl.value || null)
+  if (valid.value && !props.busy) emit('submit', template.value, cleanName.value, cleanUrl.value || null, destination.value)
 }
 
 onMounted(async () => {
@@ -55,7 +61,9 @@ onMounted(async () => {
       <label for="projects-new-url">{{ t(`${PREFIX}url`) }}</label>
       <input id="projects-new-url" v-model="url" type="text" placeholder="https://github.com/…" />
       <label for="projects-new-destination">{{ t(`${PREFIX}destination`) }}</label>
-      <input id="projects-new-destination" data-slot="destination" :value="destination" type="text" readonly />
+      <select id="projects-new-destination" v-model="destination" data-slot="destination">
+        <option v-for="o in options" :key="o.relPath" :value="o.relPath">{{ o.label }}</option>
+      </select>
       <p v-if="!gitAvailable" class="hint">{{ t(`${PREFIX}noGit`) }}</p>
       <div class="buttons">
         <button type="button" @click="emit('cancel')">{{ t(`${PREFIX}cancel`) }}</button>
@@ -112,16 +120,14 @@ fieldset {
   margin: 0;
   color: var(--text-muted);
 }
-input[type='text'] {
+input[type='text'],
+select {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   font: inherit;
-}
-input[readonly] {
-  color: var(--text-muted);
 }
 .buttons {
   display: flex;
