@@ -1,0 +1,30 @@
+{
+  "name": "Downloads cleaner",
+  "description": "Find old files, large files or certain types, and send them to the Recycle Bin after review.",
+  "noFolder": "No folder chosen",
+  "chooseFolder": "Choose folder…",
+  "extensions": "Extensions (comma-separated, empty = all)",
+  "extensionsPlaceholder": "e.g. exe, zip, msi",
+  "minAge": "Minimum age (days)",
+  "minSize": "Minimum size (MB)",
+  "scan": "Scan",
+  "found": "{count} file(s) found, {size} in total. Check the list before sending.",
+  "noFiles": "No file matches these criteria.",
+  "selectAll": "Select all",
+  "selectNone": "Select none",
+  "selectedCount": "{count} file(s) selected, {size}",
+  "sendToTrash": "Send to Recycle Bin",
+  "confirmText": "Send {count} file(s), {size}, to the Recycle Bin?",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "removedCount": "{count} file(s) sent to the Recycle Bin.",
+  "inBin": "They can be restored from the Recycle Bin.",
+  "reasons": {
+    "not_in_selection": "no longer matches the criteria, left untouched",
+    "delete_failed": "could not be deleted (file open or protected?)"
+  },
+  "errors": {
+    "folder_not_found": "This folder does not exist.",
+    "root_folder": "A drive root cannot be cleaned."
+  }
+}
