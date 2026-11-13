@@ -21,6 +21,7 @@ from wrench.shared.git.runner import GitNotFound, find_git
 from wrench.shared.git.status import RepoStatus, read_status
 from wrench.tools.projects.build import suggest_build
 from wrench.tools.projects.launch import Spawner, find_wt, spawn, terminal_args
+from wrench.tools.projects.requirements import Requirement, Runner, check, run_version
 from wrench.tools.projects.scan import FolderEntry, ProjectEntry, flatten, scan
 
 DEFAULT_MAX_DEPTH = 4
@@ -65,6 +66,12 @@ class EditorView(BaseModel):
     name: str
     exe: str
     available: bool
+
+
+class RequirementsView(BaseModel):
+    running: bool
+    items: list[Requirement] | None
+    error: dict[str, str] | None
 
 
 @dataclass
@@ -117,12 +124,14 @@ class ProjectsService(ToolService):
         spawner: Spawner = spawn,
         wt_finder: Callable[[], str | None] = find_wt,
         opener: Callable[[str], bool] = webbrowser.open,
+        runner: Runner = run_version,
     ) -> None:
         super().__init__(ctx)
         self._git_finder = git_finder
         self._spawner = spawner
         self._wt_finder = wt_finder
         self._opener = opener
+        self._runner = runner
         self._jobs = RepoJobs(max_workers=STATUS_WORKERS)
         self._lock = threading.Lock()
         self._started = False
@@ -133,6 +142,7 @@ class ProjectsService(ToolService):
         self._projects: dict[str, ProjectEntry] = {}
         self._git_projects: set[str] = set()  # inventory entries that have a `.git`
         self._repos: dict[str, _Repo] = {}  # git state cache
+        self._requirements: dict[str, RequirementsView] = {}  # kept for the process lifetime
 
     # --- configuration -------------------------------------------------------------
 
@@ -477,6 +487,42 @@ class ProjectsService(ToolService):
         if command is None:
             raise ToolError("no_build_command", "No build command is saved or suggested")
         self._open_terminal(folder, command)
+
+    # --- requirements --------------------------------------------------------------
+
+    def _run_check(self, key: str, folder: Path) -> None:
+        try:
+            view = RequirementsView(running=False, items=check(folder, self._runner), error=None)
+        except Exception as exc:
+            self.ctx.logger.exception("Requirements check failed")
+            view = RequirementsView(
+                running=False, items=None, error={"code": "check_failed", "message": str(exc)}
+            )
+        with self._lock:
+            self._requirements[key] = view
+
+    @action
+    def check_requirements(self, path: str) -> RequirementsView:
+        """Starts the check in the background; get_requirements reads the result."""
+        folder = self._folder(path)
+        key = _key(folder)
+        running = RequirementsView(running=True, items=None, error=None)
+        with self._lock:
+            current = self._requirements.get(key)
+            if current is not None and current.running:
+                return current
+            self._requirements[key] = running
+        threading.Thread(
+            target=self._run_check, args=(key, folder), name="projects-requirements", daemon=True
+        ).start()
+        return running
+
+    @action
+    def get_requirements(self, path: str) -> RequirementsView:
+        key = _key(self._project(path).path)
+        with self._lock:
+            view = self._requirements.get(key)
+        return view or RequirementsView(running=False, items=None, error=None)
 
 
 SERVICE = ProjectsService

@@ -468,3 +468,51 @@ def test_open_repo_page_failed_open(ctx: ToolContext, tmp_path: Path) -> None:
     with pytest.raises(ToolError) as exc:
         svc.invoke("open_repo_page", {"path": str(a)})
     assert exc.value.code == "launch_failed"
+
+
+def test_requirements_check_runs_in_background_and_is_read_back(
+    ctx: ToolContext, tmp_path: Path
+) -> None:
+    ran: list[Any] = []
+
+    def runner(cmd: Any) -> str | None:
+        ran.append(list(cmd))
+        return "Python 3.12.4"
+
+    svc, _spawned, a = launch_service(ctx, tmp_path, runner=runner)
+    (a / "pyproject.toml").write_text('[project]\nrequires-python = ">=3.12"\n', encoding="utf-8")
+    assert svc.invoke("get_requirements", {"path": str(a)}) == {
+        "running": False,
+        "items": None,
+        "error": None,
+    }
+    started = svc.invoke("check_requirements", {"path": str(a)})
+    assert started == {"running": True, "items": None, "error": None}
+    wait_until(lambda: not svc.invoke("get_requirements", {"path": str(a)})["running"])
+    view = svc.invoke("get_requirements", {"path": str(a)})
+    assert view["error"] is None
+    assert [(i["tool"], i["status"], i["installed"]) for i in view["items"]] == [
+        ("Python", "ok", "3.12.4")
+    ]
+    assert ran == [["py", "-3", "--version"]]
+
+
+def test_requirements_check_failure_is_reported(ctx: ToolContext, tmp_path: Path) -> None:
+    def runner(cmd: Any) -> str | None:
+        raise RuntimeError("boom")
+
+    svc, _spawned, a = launch_service(ctx, tmp_path, runner=runner)
+    (a / "pyproject.toml").write_text('[project]\nrequires-python = ">=3.12"\n', encoding="utf-8")
+    svc.invoke("check_requirements", {"path": str(a)})
+    wait_until(lambda: not svc.invoke("get_requirements", {"path": str(a)})["running"])
+    view = svc.invoke("get_requirements", {"path": str(a)})
+    assert view["items"] is None
+    assert view["error"]["code"] == "check_failed"
+
+
+def test_requirements_refuse_unknown_path(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, _spawned, _a = launch_service(ctx, tmp_path, runner=lambda cmd: None)
+    for name in ("check_requirements", "get_requirements"):
+        with pytest.raises(ToolError) as exc:
+            svc.invoke(name, {"path": str(tmp_path / "elsewhere")})
+        assert exc.value.code == "not_a_project", name
