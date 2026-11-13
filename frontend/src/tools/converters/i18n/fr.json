@@ -1,0 +1,41 @@
+{
+  "name": "Convertisseurs",
+  "description": "Convertir des unités de mesure et des devises, avec des taux saisis à la main.",
+  "tabsLabel": "Type de conversion",
+  "tabs": {
+    "units": "Unités",
+    "currencies": "Devises"
+  },
+  "category": "Grandeur",
+  "categories": {
+    "length": "Longueur",
+    "mass": "Masse",
+    "volume": "Volume",
+    "area": "Surface",
+    "speed": "Vitesse",
+    "data": "Taille de données",
+    "temperature": "Température"
+  },
+  "value": "Valeur",
+  "from": "De",
+  "to": "Vers",
+  "ratesTitle": "Taux de change",
+  "ratesHint": "Les taux sont saisis à la main, sans connexion. Ils se lisent : 1 {base} = taux de la devise.",
+  "noRates": "Aucun taux saisi pour l’instant.",
+  "removeRate": "Supprimer le taux de {code}",
+  "code": "Code (ex. USD)",
+  "rateOf": "1 {base} vaut",
+  "date": "Date du taux",
+  "addRate": "Ajouter le taux",
+  "convertTitle": "Convertir",
+  "amount": "Montant",
+  "errors": {
+    "unknown_unit": "Cette unité n’existe pas pour cette grandeur.",
+    "unknown_category": "Cette grandeur n’existe pas.",
+    "invalid_value": "La valeur doit être un nombre.",
+    "invalid_currency": "Code devise invalide : trois lettres majuscules, et pas l’euro.",
+    "invalid_rate": "Le taux doit être un nombre supérieur à zéro.",
+    "invalid_date": "La date du taux est invalide.",
+    "unknown_currency": "Devise inconnue : ajoutez son taux d’abord."
+  }
+}

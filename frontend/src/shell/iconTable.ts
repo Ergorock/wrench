@@ -2,6 +2,7 @@ import type { Component } from 'vue'
 import {
   Box,
   BookOpen,
+  Calculator,
   Code,
   Folder,
   FolderKanban,
@@ -9,6 +10,8 @@ import {
   GitFork,
   Keyboard,
   Monitor,
+  Terminal,
+  Trash2,
   Wrench,
   Zap,
 } from '@lucide/vue'
@@ -22,6 +25,7 @@ import {
 export const iconTable: Record<string, Component> = {
   box: Box,
   'book-open': BookOpen,
+  calculator: Calculator,
   code: Code,
   folder: Folder,
   'folder-kanban': FolderKanban,
@@ -29,6 +33,8 @@ export const iconTable: Record<string, Component> = {
   'git-fork': GitFork,
   keyboard: Keyboard,
   monitor: Monitor,
+  terminal: Terminal,
+  'trash-2': Trash2,
   wrench: Wrench,
   zap: Zap,
 }
