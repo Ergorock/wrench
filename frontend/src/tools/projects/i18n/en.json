@@ -45,6 +45,7 @@
     "save": "Save"
   },
   "confirm": {
+    "template": "This project is a template. Open it anyway?",
     "confirm": "Confirm",
     "cancel": "Cancel"
   },

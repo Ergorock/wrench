@@ -6,10 +6,11 @@ import { pickFolder, toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
 import { toastError } from '../../shell/toasts'
 import ConfigDialog from './ConfigDialog.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 import FolderCard from './FolderCard.vue'
 import ProjectCard from './ProjectCard.vue'
-import { breadcrumb, byName, findFolder, searchProjects } from './logic'
-import type { Config, EditorView, State } from './types'
+import { breadcrumb, byName, findFolder, needsTemplateConfirm, searchProjects } from './logic'
+import type { Config, EditorView, ProjectEntry, State } from './types'
 
 const PREFIX = 'tools.projects.'
 const POLL_MS = 1000
@@ -24,6 +25,7 @@ const relPath = ref('')
 const query = ref('')
 const selected = ref<string | null>(null)
 const configuring = ref(false)
+const pendingOpen = ref<{ path: string; editorId: string } | null>(null)
 let pollFailed = false
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let unmounted = false
@@ -108,6 +110,17 @@ async function chooseRoot(): Promise<void> {
   if (folder !== null && config.value) {
     await saveConfig(folder, config.value.templates_dir, config.value.max_depth)
   }
+}
+
+function requestOpen(p: ProjectEntry, editorId: string): void {
+  if (needsTemplateConfirm(p)) pendingOpen.value = { path: p.path, editorId }
+  else void openIn(p.path, editorId)
+}
+
+async function confirmOpen(): Promise<void> {
+  const pending = pendingOpen.value
+  pendingOpen.value = null
+  if (pending) await openIn(pending.path, pending.editorId)
 }
 
 async function openIn(path: string, editorId: string): Promise<void> {
@@ -204,7 +217,7 @@ onUnmounted(() => {
                 :selected="selected === p.path"
                 :show-path="searching"
                 @select="selected = p.path"
-                @open="(editorId) => openIn(p.path, editorId)"
+                @open="(editorId) => requestOpen(p, editorId)"
               />
             </div>
           </div>
@@ -214,6 +227,12 @@ onUnmounted(() => {
       </template>
     </template>
 
+    <ConfirmDialog
+      v-if="pendingOpen"
+      :message="t(`${PREFIX}confirm.template`)"
+      @confirm="confirmOpen"
+      @cancel="pendingOpen = null"
+    />
     <ConfigDialog v-if="configuring && config" :config="config" @save="saveConfig" @cancel="configuring = false" />
   </div>
 </template>

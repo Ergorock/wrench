@@ -191,3 +191,41 @@ describe('ProjectsTool', () => {
     expect(card.classList.contains('selected')).toBe(true)
   })
 })
+
+describe('ProjectsTool, projet modèle', () => {
+  const withTemplate = (): void => {
+    current = { ...baseState, tree: folder('Dev', '', [], [project('Tpl', 'Tpl', { is_template: true }), project('Alpha', 'Alpha')]) }
+  }
+  const editorButton = (name: string) =>
+    [...host.querySelectorAll('[data-project]')]
+      .find((e) => e.textContent?.includes(name))
+      ?.querySelector('button[title="VS Code"]') as HTMLButtonElement
+
+  it('confirmation d’abord ; Cancel n’appelle rien ; Confirm appelle open_in', async () => {
+    withTemplate()
+    await mountTool()
+    editorButton('Tpl').click()
+    await settle()
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('This project is a template. Open it anyway?')
+    expect(calls.some((c) => c.action === 'open_in')).toBe(false)
+    button('Cancel')?.click()
+    await settle()
+    expect(host.querySelector('[role="dialog"]')).toBeNull()
+    expect(calls.some((c) => c.action === 'open_in')).toBe(false)
+    editorButton('Tpl').click()
+    await settle()
+    button('Confirm')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_in')?.payload).toEqual({ path: 'C:\\Dev\\Tpl', editor_id: 'vscode' })
+    expect(host.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('un projet ordinaire s’ouvre sans confirmation', async () => {
+    withTemplate()
+    await mountTool()
+    editorButton('Alpha').click()
+    await settle()
+    expect(host.querySelector('[role="dialog"]')).toBeNull()
+    expect(calls.find((c) => c.action === 'open_in')?.payload).toEqual({ path: 'C:\\Dev\\Alpha', editor_id: 'vscode' })
+  })
+})

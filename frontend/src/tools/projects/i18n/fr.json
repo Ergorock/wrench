@@ -45,6 +45,7 @@
     "save": "Enregistrer"
   },
   "confirm": {
+    "template": "Ce projet est un modèle. L’ouvrir quand même ?",
     "confirm": "Confirmer",
     "cancel": "Annuler"
   },
