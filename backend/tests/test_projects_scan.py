@@ -41,12 +41,15 @@ def test_depth_counts_and_no_nesting(tmp_path: Path) -> None:
     deep = tmp_path / "a" / "b" / "c" / "d" / "e"
     deep.mkdir(parents=True)
     (deep / "README.md").touch()
+    edge = tmp_path / "a" / "b" / "c" / "p"  # exactly depth 4: included
+    edge.mkdir()
+    (edge / "README.md").touch()
     tree = scan(tmp_path, 4, None)
     m3 = next(f for f in tree.folders if f.name == "M3")
     assert m3.project_count == 1 and m3.projects[0].name == "Liste"
     assert m3.projects[0].rel_path == "M3" + os.sep + "Liste"
-    assert tree.project_count == 1  # e is at depth 5
-    assert [p.name for p in flatten(tree)] == ["Liste"]
+    assert tree.project_count == 2  # p (depth 4) is in, e (depth 5) is out
+    assert [p.name for p in flatten(tree)] == ["Liste", "p"]
 
 
 def test_accents_spaces_and_skips(tmp_path: Path) -> None:  # Review Focus 2
@@ -89,10 +92,13 @@ def test_template_flag_and_techs(tmp_path: Path) -> None:
     assert by_name["other"].techs == ["Rust", "Java"]
 
 
-def test_sorted_casefold_and_links(tmp_path: Path) -> None:
-    for name in ["b", "A", "c"]:
+def test_sorted_casefold_and_no_markers(tmp_path: Path) -> None:
+    for name in ["B", "a", "C"]:
         (tmp_path / name).mkdir()
         (tmp_path / name / "README.md").touch()
+    for name in ["Z", "y"]:
+        (tmp_path / name).mkdir()
     tree = scan(tmp_path, 4, None)
-    assert [p.name for p in tree.projects] == ["A", "b", "c"]
-    assert techs_of(tmp_path / "A") == []
+    assert [p.name for p in tree.projects] == ["a", "B", "C"]
+    assert [f.name for f in tree.folders] == ["y", "Z"]
+    assert techs_of(tmp_path / "a") == []
