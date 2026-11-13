@@ -6,6 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from wrench.shared.editors import Editor
+
 _log = logging.getLogger(__name__)
 
 
@@ -47,12 +49,17 @@ class ToolContext:
         storage: ToolStorage,
         get_language: Callable[[], str],
         logger: logging.Logger,
+        get_editors: Callable[[], list[Editor]] = lambda: [],
     ) -> None:
         self.tool_id = tool_id
         self.storage = storage
         self.logger = logger
         self._get_language = get_language
+        self._get_editors = get_editors
 
     @property
     def language(self) -> str:
         return self._get_language()
+
+    def editors(self) -> list[Editor]:
+        return self._get_editors()

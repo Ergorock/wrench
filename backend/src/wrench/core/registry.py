@@ -9,6 +9,7 @@ from typing import Any
 
 from wrench.core.categories import category_ids
 from wrench.sdk import ToolContext, ToolError, ToolManifest, ToolService, ToolStorage
+from wrench.shared.editors import Editor
 
 logger = logging.getLogger("wrench.registry")
 
@@ -55,10 +56,12 @@ class ToolRegistry:
         tools: list[LoadedTool],
         storage_dir: Path,
         get_language: Callable[[], str],
+        get_editors: Callable[[], list[Editor]] = lambda: [],
     ) -> None:
         self._tools = {t.manifest.id: t for t in tools}
         self._storage_dir = storage_dir
         self._get_language = get_language
+        self._get_editors = get_editors
         self._instances: dict[str, ToolService] = {}
         self._lock = threading.Lock()
         # pywebview runs each JS call on its own thread: a tool's actions are serialized.
@@ -78,6 +81,7 @@ class ToolRegistry:
                     ToolStorage(self._storage_dir / f"{tool_id}.json"),
                     self._get_language,
                     logging.getLogger(f"wrench.tools.{tool_id}"),
+                    self._get_editors,
                 )
                 self._instances[tool_id] = tool.service_cls(ctx)
             return self._instances[tool_id]

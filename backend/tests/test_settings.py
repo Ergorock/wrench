@@ -77,3 +77,10 @@ def test_old_settings_without_updates(tmp_path):
     r = SettingsStore(p, "en").load()
     assert not r.recovered and r.settings.updates.auto_check is True
     assert r.settings.updates.last_check is None
+
+
+def test_defaults_when_key_absent(tmp_path):
+    (tmp_path / "s.json").write_text('{"language": "fr"}', "utf-8")
+    s = SettingsStore(tmp_path / "s.json", "fr").load().settings
+    assert [e.id for e in s.editors] == ["claude", "kiro", "vscode"]
+    assert s.editors[0].exe == r"shell:AppsFolder\Claude_pzs8sxrjxfjjc!Claude"

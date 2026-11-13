@@ -6,6 +6,7 @@ import pytest
 
 from wrench.core.registry import ToolRegistry, discover_tools
 from wrench.sdk import ToolError
+from wrench.shared.editors import Editor
 
 
 def test_only_valid_tools_are_loaded(caplog: pytest.LogCaptureFixture) -> None:
@@ -49,3 +50,10 @@ def test_concurrent_calls_on_one_tool_are_serialized(tmp_path: Path) -> None:
     data = json.loads((tmp_path / "good_tool.json").read_text("utf-8"))
     assert sorted(data["items"]) == list(range(40))
     assert [p.name for p in tmp_path.iterdir()] == ["good_tool.json"]
+
+
+def test_registry_passes_editors(tmp_path: Path) -> None:
+    eds = [Editor(id="a", name="A", exe="a.exe")]
+    tools = discover_tools("fake_tools", ["system"])
+    reg = ToolRegistry(tools, tmp_path, lambda: "en", lambda: eds)
+    assert reg._instance("good_tool").ctx.editors() == eds

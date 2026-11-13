@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from wrench.shared.editors import Editor, default_editors
+
 
 class SidebarSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -56,6 +58,7 @@ class Settings(BaseModel):
     window: WindowSettings = Field(default_factory=WindowSettings)
     last_tool: str | None = None
     updates: UpdateSettings = Field(default_factory=UpdateSettings)
+    editors: list[Editor] = Field(default_factory=default_editors)
 
 
 def detect_system_language() -> str:

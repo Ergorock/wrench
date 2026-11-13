@@ -236,3 +236,8 @@ def test_pick_folder_cancel(api: Api) -> None:
 
 def test_pick_folder_without_window(api: Api) -> None:
     assert api.pick_folder()["error"]["code"] == "internal_error"
+
+
+def test_save_settings_rejects_editor_without_name(api: Api) -> None:
+    r = api.save_settings({"editors": [{"id": "a", "exe": "a.exe"}]})
+    assert r["error"]["code"] == "invalid_settings"

@@ -115,6 +115,7 @@ def _run() -> int:
         discover_tools(),
         paths.tools_data_dir(),
         lambda: api._current().language,
+        lambda: api._current().editors,
     )
     autostart = Autostart()
     autostart.refresh_path()
