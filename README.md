@@ -6,6 +6,9 @@ Wrench est une application de bureau Windows qui regroupe de petits outils du qu
 
 - **Raccourcis Windows** : les raccourcis clavier de Windows 11, groupés et faciles à rechercher.
 - **Dépôts Git** : l'état de tous les dépôts git rangés sous un ou plusieurs dossiers racines (travail non commité, commits à pousser ou à tirer, conflits), avec `fetch`, `pull` en avance rapide uniquement, `push` (jamais forcé) et commit de toutes les modifications. Cet outil utilise le `git` installé sur le poste (`winget install Git.Git`). Wrench ne stocke aucun identifiant : l'authentification passe par git et le gestionnaire d'identifiants Windows.
+- **Projets** : les projets du dossier Dev (racine réglée dans les paramètres de l'outil) en cartes, avec navigation par dossiers et recherche. Chaque carte ouvre le projet dans Claude, Kiro ou VS Code, affiche l'état git, propose une commande de build (Lancer, dans une fenêtre qui reste ouverte) et vérifie les prérequis. Un projet peut aussi être créé à partir d'un modèle : copie du dossier sans son `.git`, `git init`, puis `origin` si une URL est donnée.
+  - **Éditeurs** (Paramètres) : chemin de chaque éditeur. Limite : Claude ouvre l'application de bureau, sans contexte (le dossier du projet n'est pas transmis) ; Kiro et VS Code ouvrent le dossier.
+  - **Prérequis** : lus d'abord dans les fichiers standard du projet (`package.json`, `pyproject.toml`, etc.), puis dans la section `## Prérequis` du README. Seule la commande `<outil> --version` est exécutée, jamais un script du projet.
 
 ## Prérequis
 
