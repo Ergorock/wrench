@@ -1,0 +1,34 @@
+{
+  "name": "Référence rapide",
+  "description": "Commandes git, PowerShell et SQL les plus utiles, avec une recherche.",
+  "searchPlaceholder": "Rechercher une commande…",
+  "noResults": "Aucune commande ne correspond.",
+  "sheets": {
+    "git": "Git",
+    "powershell": "PowerShell",
+    "sql": "SQL"
+  },
+  "entries": {
+    "git_status": "État du dépôt et de la branche",
+    "git_log_graph": "Historique condensé de toutes les branches",
+    "git_stash_push": "Mettre de côté les modifications",
+    "git_stash_pop": "Réappliquer le dernier stash",
+    "git_amend": "Ajouter les modifications au dernier commit",
+    "git_reset_soft": "Annuler le dernier commit en gardant les modifications",
+    "git_restore_staged": "Retirer un fichier de l’index",
+    "ps_get_help": "Exemples d’utilisation d’une commande",
+    "ps_find_files": "Chercher des fichiers dans les sous-dossiers",
+    "ps_find_text": "Chercher un texte dans des fichiers",
+    "ps_test_path": "Vérifier qu’un chemin existe",
+    "ps_follow_file": "Suivre la fin d’un fichier en direct",
+    "ps_top_processes": "Processus les plus gourmands en CPU",
+    "ps_rest_call": "Appeler une API REST avec un jeton",
+    "sql_filter": "Sélection avec filtre",
+    "sql_distinct": "Valeurs uniques d’une colonne",
+    "sql_count_by": "Compter les lignes par valeur",
+    "sql_duplicates": "Doublons : clés présentes plus d’une fois",
+    "sql_inner_join": "Jointure interne",
+    "sql_left_join": "Jointure gauche, garde les lignes sans correspondance",
+    "sql_case": "Valeur conditionnelle"
+  }
+}

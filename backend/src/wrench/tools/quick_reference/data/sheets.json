@@ -1,0 +1,40 @@
+{
+  "sheets": [
+    {
+      "id": "git",
+      "entries": [
+        { "id": "git_status", "command": "git status -sb" },
+        { "id": "git_log_graph", "command": "git log --oneline --graph --all" },
+        { "id": "git_stash_push", "command": "git stash push -m \"message\"" },
+        { "id": "git_stash_pop", "command": "git stash pop" },
+        { "id": "git_amend", "command": "git commit --amend --no-edit" },
+        { "id": "git_reset_soft", "command": "git reset --soft HEAD~1" },
+        { "id": "git_restore_staged", "command": "git restore --staged <fichier>" }
+      ]
+    },
+    {
+      "id": "powershell",
+      "entries": [
+        { "id": "ps_get_help", "command": "Get-Help <commande> -Examples" },
+        { "id": "ps_find_files", "command": "Get-ChildItem -Recurse -Filter *.log" },
+        { "id": "ps_find_text", "command": "Select-String -Path *.txt -Pattern \"motif\"" },
+        { "id": "ps_test_path", "command": "Test-Path <chemin>" },
+        { "id": "ps_follow_file", "command": "Get-Content <fichier> -Wait -Tail 20" },
+        { "id": "ps_top_processes", "command": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10" },
+        { "id": "ps_rest_call", "command": "Invoke-RestMethod -Uri <url> -Headers @{ Authorization = \"Bearer <jeton>\" }" }
+      ]
+    },
+    {
+      "id": "sql",
+      "entries": [
+        { "id": "sql_filter", "command": "SELECT colonnes FROM table WHERE condition" },
+        { "id": "sql_distinct", "command": "SELECT DISTINCT colonne FROM table" },
+        { "id": "sql_count_by", "command": "SELECT colonne, COUNT(*) FROM table GROUP BY colonne" },
+        { "id": "sql_duplicates", "command": "SELECT clé, COUNT(*) FROM table GROUP BY clé HAVING COUNT(*) > 1" },
+        { "id": "sql_inner_join", "command": "SELECT ... FROM a INNER JOIN b ON a.clé = b.clé" },
+        { "id": "sql_left_join", "command": "SELECT ... FROM a LEFT JOIN b ON a.clé = b.clé" },
+        { "id": "sql_case", "command": "CASE WHEN condition THEN valeur ELSE autre END" }
+      ]
+    }
+  ]
+}

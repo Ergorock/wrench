@@ -1,0 +1,34 @@
+{
+  "name": "Quick reference",
+  "description": "The most useful git, PowerShell and SQL commands, with search.",
+  "searchPlaceholder": "Search a command…",
+  "noResults": "No command matches.",
+  "sheets": {
+    "git": "Git",
+    "powershell": "PowerShell",
+    "sql": "SQL"
+  },
+  "entries": {
+    "git_status": "Repository and branch status",
+    "git_log_graph": "Compact history of all branches",
+    "git_stash_push": "Set local changes aside",
+    "git_stash_pop": "Reapply the last stash",
+    "git_amend": "Add changes to the last commit",
+    "git_reset_soft": "Undo the last commit, keeping the changes",
+    "git_restore_staged": "Remove a file from the index",
+    "ps_get_help": "Usage examples for a command",
+    "ps_find_files": "Find files in subfolders",
+    "ps_find_text": "Find text in files",
+    "ps_test_path": "Check that a path exists",
+    "ps_follow_file": "Follow the end of a file live",
+    "ps_top_processes": "Processes using the most CPU",
+    "ps_rest_call": "Call a REST API with a token",
+    "sql_filter": "Select with a filter",
+    "sql_distinct": "Unique values of a column",
+    "sql_count_by": "Count rows per value",
+    "sql_duplicates": "Duplicates: keys that appear more than once",
+    "sql_inner_join": "Inner join",
+    "sql_left_join": "Left join, keeps rows without a match",
+    "sql_case": "Conditional value"
+  }
+}
