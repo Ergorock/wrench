@@ -33,7 +33,9 @@ let config: Config
 let current: State
 let picked: string | null
 let setBuildGate: Promise<void> | null
+let setRunGate: Promise<void> | null
 let build: { command: string | null; suggested: string | null }
+let runInfo: { command: string | null; suggested: string | null }
 let reqViews: RequirementsView[]
 let reqFail = false
 let reqChecked = false
@@ -72,7 +74,7 @@ function installApi(): void {
             ],
           }
         }
-        if (action === 'open_in' || action === 'open_terminal' || action === 'run_build') return { ok: true, data: null }
+        if (action === 'open_in' || action === 'open_terminal' || action === 'run_build' || action === 'run_run') return { ok: true, data: null }
         if (action === 'check_requirements' || action === 'get_requirements') {
           if (action === 'check_requirements') reqChecked = true
           if (!reqChecked) return { ok: true, data: { running: false, items: null, error: null } }
@@ -81,6 +83,9 @@ function installApi(): void {
         }
         if (action === 'clear_creation') return { ok: true, data: { ...current, creation: null } }
         if (action === 'list_templates') return { ok: true, data: templates }
+        if (action === 'get_run') return { ok: true, data: runInfo }
+        if (action === 'set_run' && setRunGate) await setRunGate
+        if (action === 'set_run') return { ok: true, data: { command: payload?.command, suggested: runInfo.suggested } }
         if (action === 'get_build') return { ok: true, data: build }
         if (action === 'set_build' && setBuildGate) await setBuildGate
         if (action === 'set_build') return { ok: true, data: { command: payload?.command, suggested: build.suggested } }
@@ -112,6 +117,8 @@ beforeEach(() => {
   picked = 'C:\\Dev'
   build = { command: null, suggested: 'npm run build' }
   setBuildGate = null
+  runInfo = { command: null, suggested: 'npm run dev' }
+  setRunGate = null
   templates = ['Basic', 'Node app']
   reqViews = [{ running: false, items: null, error: null }]
   reqFail = false
@@ -492,6 +499,70 @@ describe('ProjectsTool, fiche : build en attente', () => {
     fail()
     await settle()
     expect(calls.some((c) => c.action === 'run_build')).toBe(false)
+  })
+})
+
+describe('ProjectsTool, fiche : lancement', () => {
+  const A = 'C:\\Dev\\Alpha'
+  const open = async (path = A) => {
+    await mountTool()
+    const card = [...host.querySelectorAll('[data-project]')].find((e) => e.getAttribute('data-project') === path)
+    ;(card as HTMLElement).click()
+    await settle()
+    return host.querySelector('[data-slot="detail"] input.run') as HTMLInputElement
+  }
+  const runButton = (input: HTMLInputElement) => input.parentElement?.querySelector('button') as HTMLButtonElement
+  const type = (input: HTMLInputElement, value: string) => {
+    input.value = value
+    input.dispatchEvent(new Event('input'))
+  }
+
+  it('la suggestion est le placeholder quand rien n’est enregistré', async () => {
+    const input = await open()
+    expect(input.placeholder).toBe('npm run dev')
+    expect(input.value).toBe('')
+  })
+
+  it('la commande enregistrée remplit le champ', async () => {
+    runInfo = { command: 'python -m x', suggested: null }
+    const input = await open()
+    expect(input.value).toBe('python -m x')
+  })
+
+  it('blur enregistre via set_run', async () => {
+    const input = await open()
+    type(input, 'make dev')
+    input.dispatchEvent(new Event('blur'))
+    await settle()
+    expect(calls.filter((c) => c.action === 'set_run').map((c) => c.payload)).toEqual([{ path: A, command: 'make dev' }])
+  })
+
+  it('Lancer attend l’enregistrement en cours : set_run puis run_run', async () => {
+    let release!: () => void
+    setRunGate = new Promise<void>((r) => (release = r))
+    const input = await open()
+    type(input, 'make dev')
+    input.dispatchEvent(new Event('blur'))
+    runButton(input).click()
+    await settle()
+    expect(calls.some((c) => c.action === 'run_run')).toBe(false)
+    release()
+    await settle()
+    const order = calls.map((c) => c.action).filter((a) => a === 'set_run' || a === 'run_run')
+    expect(order).toEqual(['set_run', 'run_run'])
+    expect(calls.find((c) => c.action === 'run_run')?.payload).toEqual({ path: A })
+  })
+
+  it('sur un modèle, Lancer demande la confirmation avant run_run', async () => {
+    current = { ...baseState, tree: folder('Dev', '', [], [project('Tpl', 'Tpl', { is_template: true })]) }
+    const input = await open('C:\\Dev\\Tpl')
+    runButton(input).click()
+    await settle()
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(calls.some((c) => c.action === 'run_run')).toBe(false)
+    button('Confirm')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'run_run')?.payload).toEqual({ path: 'C:\\Dev\\Tpl' })
   })
 })
 

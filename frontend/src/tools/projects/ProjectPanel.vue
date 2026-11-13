@@ -10,7 +10,7 @@ import { toastError } from '../../shell/toasts'
 import ConfirmDialog from './ConfirmDialog.vue'
 import RemoteDialog from './RemoteDialog.vue'
 import { buildDraftChanged, gitBadges, needsTemplateConfirm, requirementIcon, requirementLabelKey } from './logic'
-import type { BuildInfo, EditorView, GitView, ProjectEntry, RequirementsView } from './types'
+import type { BuildInfo, EditorView, GitView, ProjectEntry, RequirementsView, RunInfo } from './types'
 
 const PREFIX = 'tools.projects.'
 const POLL_MS = 1000
@@ -34,6 +34,8 @@ const committing = ref(false)
 const linking = ref(false)
 const build = ref<BuildInfo>({ command: null, suggested: null })
 const draft = ref('')
+const runInfo = ref<RunInfo>({ command: null, suggested: null })
+const runDraft = ref('')
 const requirements = ref<RequirementsView | null>(null)
 let reqTimer: ReturnType<typeof setTimeout> | null = null
 let reqFailed = false
@@ -155,6 +157,41 @@ async function runBuild(): Promise<void> {
   await call('run_build')
 }
 
+async function loadRun(): Promise<void> {
+  try {
+    runInfo.value = await tool.call<RunInfo>('get_run', { path: props.project.path })
+    runDraft.value = runInfo.value.command ?? ''
+  } catch {
+    // useTool has already shown the error toast.
+  }
+}
+
+// Same wait as for the build: "Lancer" never runs the old command.
+let pendingRunSave: Promise<void> = Promise.resolve()
+let queuedRun: string | null = null
+
+function saveRun(): void {
+  const command = runDraft.value
+  if (!buildDraftChanged(runInfo.value, command) || command.trim() === queuedRun) return
+  queuedRun = command.trim()
+  pendingRunSave = pendingRunSave.then(async () => {
+    try {
+      runInfo.value = await tool.call<RunInfo>('set_run', { path: props.project.path, command })
+      runDraft.value = runInfo.value.command ?? ''
+    } catch {
+      // useTool has already shown the error toast.
+      queuedRun = null
+    }
+  })
+}
+
+async function runRun(): Promise<void> {
+  saveRun()
+  await pendingRunSave
+  if (buildDraftChanged(runInfo.value, runDraft.value)) return
+  await call('run_run')
+}
+
 function commit(message: string, push: boolean): void {
   committing.value = false
   emit('act', 'commit', { path: props.project.path, message, push })
@@ -170,7 +207,10 @@ function onKeydown(e: KeyboardEvent): void {
 }
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
-  if (!props.missing) void loadBuild()
+  if (!props.missing) {
+    void loadBuild()
+    void loadRun()
+  }
   loadRequirements()
 })
 watch(() => props.project.path, loadRequirements)
@@ -252,6 +292,22 @@ onUnmounted(() => {
             @keydown.enter="saveBuild"
           />
           <button type="button" @click="guarded(runBuild)">{{ t(`${PREFIX}panel.run`) }}</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>{{ t(`${PREFIX}panel.runSection`) }}</h3>
+        <div class="row">
+          <input
+            v-model="runDraft"
+            class="build run"
+            type="text"
+            :placeholder="runInfo.suggested ?? ''"
+            :aria-label="t(`${PREFIX}panel.runLabel`)"
+            @blur="saveRun"
+            @keydown.enter="saveRun"
+          />
+          <button type="button" @click="guarded(runRun)">{{ t(`${PREFIX}panel.run`) }}</button>
         </div>
       </section>
 

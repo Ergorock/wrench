@@ -50,6 +50,11 @@ export interface BuildInfo {
   suggested: string | null
 }
 
+export interface RunInfo {
+  command: string | null
+  suggested: string | null
+}
+
 export interface EditorView {
   id: string
   name: string

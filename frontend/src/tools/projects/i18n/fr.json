@@ -72,6 +72,8 @@
     "dismissError": "Ignorer",
     "build": "Build",
     "buildLabel": "Commande de build",
+    "runSection": "Version non compilée",
+    "runLabel": "Commande de lancement",
     "run": "Lancer",
     "remote": {
       "title": "Associer un dépôt",
@@ -111,6 +113,7 @@
     "copy_failed": "La copie du modèle a échoué.",
     "root_missing": "Le dossier racine est introuvable.",
     "no_build_command": "Aucune commande de build n’est enregistrée ni suggérée.",
+    "no_run_command": "Aucune commande de lancement n’est enregistrée ni suggérée.",
     "not_a_repo": "Ce dossier n’est pas un dépôt git.",
     "empty_message": "Le message du commit est obligatoire.",
     "git_failed": "La commande git a échoué.",

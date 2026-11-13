@@ -72,6 +72,8 @@
     "dismissError": "Dismiss",
     "build": "Build",
     "buildLabel": "Build command",
+    "runSection": "Uncompiled version",
+    "runLabel": "Run command",
     "run": "Run",
     "remote": {
       "title": "Link a repository",
@@ -111,6 +113,7 @@
     "copy_failed": "The copy of the template failed.",
     "root_missing": "The root folder was not found.",
     "no_build_command": "No build command is saved or suggested.",
+    "no_run_command": "No run command is saved or suggested.",
     "not_a_repo": "This folder is not a git repository.",
     "empty_message": "The commit message is required.",
     "git_failed": "The git command failed.",

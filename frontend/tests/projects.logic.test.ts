@@ -148,7 +148,7 @@ describe('isRemoteUrl', () => {
 
 describe('projects errors i18n', () => {
   const codes = [
-    'not_a_repo', 'no_build_command', 'empty_message', 'git_failed', 'check_failed', 'copy_failed',
+    'not_a_repo', 'no_build_command', 'no_run_command', 'empty_message', 'git_failed', 'check_failed', 'copy_failed',
     'editor_missing', 'launch_failed', 'invalid_name', 'target_exists', 'invalid_url', 'remote_exists',
     'not_a_project', 'busy', 'git_not_found', 'scan_failed', 'root_missing', 'templates_missing',
     'nothing_to_commit', 'no_remote', 'auth_required', 'timeout', 'detached_head', 'in_progress',
