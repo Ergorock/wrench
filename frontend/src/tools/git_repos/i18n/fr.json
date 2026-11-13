@@ -11,7 +11,7 @@
   },
   "badges": {
     "ahead": "↑{n}",
-    "aheadTitle": "{n} commit(s) à pousser",
+    "aheadTitle": "{n} commit(s) à pousser. Cliquer pour voir l’historique.",
     "behind": "↓{n}",
     "behindTitle": "{n} commit(s) à tirer",
     "changes": "● {n}",
@@ -23,12 +23,25 @@
     "unpublished": "branche non publiée",
     "upToDate": "✓ À jour",
     "fetched": "Récupéré {when}",
-    "host": {
-      "github": "GitHub",
-      "gitea": "Gitea",
-      "other": "Autre hébergement"
+    "clearError": "Effacer l’erreur",
+    "hostTitle": {
+      "github": "Dépôt GitHub",
+      "gitea": "Dépôt Gitea",
+      "other": "Dépôt git distant"
     },
-    "clearError": "Effacer l’erreur"
+    "hostTitleUrl": "{label} — {url}",
+    "branchTitle": {
+      "tracking": "Branche {branch}, suit {upstream}. Cliquer pour voir les branches.",
+      "untracked": "Branche {branch}, sans branche suivie. Cliquer pour voir les branches.",
+      "detached": "Tête détachée : aucune branche n’est extraite. Cliquer pour voir les branches."
+    },
+    "conflictTitle": "Des fichiers sont en conflit : résolvez-les avec git avant de commiter.",
+    "operationTitle": "Un {op} est en cours dans ce dépôt : terminez-le ou annulez-le avec git.",
+    "detachedTitle": "Aucune branche n’est extraite : tirer, pousser et commiter sont désactivés.",
+    "noRemoteTitle": "Ce dépôt n’a aucun distant : rien à récupérer ni à pousser.",
+    "unpublishedTitle": "Cette branche n’existe pas encore sur le distant : « Pousser » la publiera.",
+    "upToDateTitle": "Rien à commiter, à pousser ni à tirer.",
+    "errorTitle": "La dernière opération a échoué. Détail de git : {message}"
   },
   "actions": {
     "fetch": "Récupérer",
@@ -40,7 +53,9 @@
       "pull": "Tirage…",
       "push": "Envoi…",
       "commit": "Commit…"
-    }
+    },
+    "history": "Historique",
+    "historyTitle": "Voir l’historique des commits"
   },
   "commit": {
     "title": "Commiter {name}",
@@ -92,6 +107,37 @@
     "git_failed": "La commande git a échoué.",
     "unknown_repo": "Ce dépôt est inconnu : actualisez la liste.",
     "git_not_found": "git est introuvable sur ce poste.",
-    "busy": "Une opération est déjà en cours sur ce dépôt."
+    "busy": "Une opération est déjà en cours sur ce dépôt.",
+    "unknown_ref": "Cette branche n’existe plus : actualisez la liste."
+  },
+  "dialog": {
+    "close": "Fermer",
+    "loading": "Chargement…"
+  },
+  "branches": {
+    "title": "Branches de {name}",
+    "main": "Branche principale : {main}",
+    "noMain": "Aucune branche principale (main, master ou origin/HEAD) : la fusion n’est pas indiquée.",
+    "local": "Locales ({n})",
+    "remote": "Distantes ({n})",
+    "current": "courante",
+    "isMain": "principale",
+    "merged": "✓ fusionnée",
+    "mergedTitle": "Tous ses commits sont dans {main}.",
+    "notInMain": "+{n} commit | +{n} commits",
+    "notInMainTitle": "{n} commit(s) absent(s) de {main}",
+    "aheadTitle": "{n} commit(s) en avance sur {upstream}",
+    "behindTitle": "{n} commit(s) en retard sur {upstream}",
+    "lastCommit": "Dernier commit : {when}",
+    "open": "Voir les commits de {name}",
+    "empty": "Aucune branche."
+  },
+  "history": {
+    "title": "Historique de {name}",
+    "current": "branche courante",
+    "detached": "tête détachée",
+    "unpushedTitle": "Pas encore poussé sur la branche suivie",
+    "more": "Voir plus",
+    "empty": "Aucun commit."
   }
 }

@@ -10,6 +10,7 @@ const repo = (o: Partial<RepoView> = {}): RepoView => ({
   root: 'C:\\Dev',
   name: 'a',
   rel_path: 'a',
+  web_url: 'https://github.com/x/a',
   branch: 'main',
   detached: false,
   upstream: 'origin/main',
@@ -45,6 +46,23 @@ function installApi(): void {
         calls.push({ action, payload })
         if (action === 'get_config') {
           return { ok: true, data: { roots: ['C:\\Dev'], max_depth: 3, missing_roots: [] } }
+        }
+        if (action === 'get_branches') {
+          return {
+            ok: true,
+            data: {
+              main: 'main',
+              local: [
+                { name: 'feature/x', current: true, upstream: null, ahead: 0, behind: 0, merged: false, commits_not_in_main: 2, last_commit: null },
+                { name: 'done', current: false, upstream: null, ahead: 0, behind: 0, merged: true, commits_not_in_main: 0, last_commit: null },
+              ],
+              remote: [{ name: 'origin/main', last_commit: null }],
+            },
+          }
+        }
+        if (action === 'get_commits') {
+          const c = { short_hash: 'abc1234', hash: 'abc1234'.padEnd(40, '0'), subject: 'Fix it', message: 'Fix it\n\nbody', author: 'Ann', date: '2026-11-12T10:00:00Z', unpushed: true }
+          return { ok: true, data: [c] }
         }
         if (action === 'rescan' && holdRescan) {
           await new Promise<void>((resolve) => (releaseRescan = resolve))
@@ -134,4 +152,48 @@ describe('GitReposTool', () => {
     expect(calls.filter((c) => c.action === 'get_state').length).toBeGreaterThanOrEqual(3)
     expect(toasts.value).toHaveLength(1)
   }, 10000)
+
+  it('Historique, ↑n et branche ouvrent les fenêtres ; Échap les ferme', async () => {
+    runningPolls = 0
+    await mountTool()
+    const button = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes(text))
+    const press = async (el: Element | null | undefined, key?: string) => {
+      if (key) el?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+      else (el as HTMLElement | null)?.click()
+      await wait(20)
+      await nextTick()
+    }
+
+    await press(button('History'))
+    expect(calls.at(-1)).toEqual({ action: 'get_commits', payload: { path: repo().path, ref: null, skip: 0 } })
+    const dialog = host.querySelector('[role="dialog"]')
+    expect(dialog?.textContent).toContain('abc1234')
+    expect(dialog?.querySelector('li')?.getAttribute('title')).toBe('Fix it\n\nbody')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Close')
+    await press(document.activeElement, 'Escape')
+    expect(host.querySelector('[role="dialog"]')).toBeNull()
+
+    await press(button('↑1'))
+    expect(calls.at(-1)?.action).toBe('get_commits')
+    await press(host.querySelector('[role="dialog"] .close'))
+
+    await press(button('main'))
+    expect(calls.at(-1)).toEqual({ action: 'get_branches', payload: { path: repo().path } })
+    const branches = host.querySelector('[role="dialog"]')
+    expect(branches?.textContent).toContain('+2 commits')
+    expect(branches?.textContent).toContain('✓ merged')
+    expect(branches?.textContent).toContain('Remote (1)')
+    await press(button('feature/x'))
+    expect(calls.at(-1)).toEqual({ action: 'get_commits', payload: { path: repo().path, ref: 'feature/x', skip: 0 } })
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(2)
+    await press(document.activeElement, 'Escape')
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+  })
+
+  it('infobulles de l’icône d’hôte et de la branche', async () => {
+    runningPolls = 0
+    await mountTool()
+    expect(host.querySelector('.host')?.getAttribute('title')).toBe('GitHub repository — github.com/x/a')
+    expect(host.querySelector('.branch')?.getAttribute('title')).toContain('tracks origin/main')
+  })
 })

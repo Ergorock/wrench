@@ -5,7 +5,9 @@ import { Download, FolderPlus, LoaderCircle, RefreshCw, Settings } from '@lucide
 import { pickFolder, toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
 import { toastError } from '../../shell/toasts'
+import BranchesDialog from './BranchesDialog.vue'
 import CommitDialog from './CommitDialog.vue'
+import CommitsDialog from './CommitsDialog.vue'
 import FoldersView from './FoldersView.vue'
 import RepoRow from './RepoRow.vue'
 import { filterRepos, sortRepos } from './logic'
@@ -23,6 +25,9 @@ const view = ref<'list' | 'folders'>('list')
 const query = ref('')
 const onlyAttention = ref(false)
 const committing = ref<RepoView | null>(null)
+const branchesOf = ref<RepoView | null>(null)
+// Commits window: a repository, and a branch name or null for its current branch.
+const historyOf = ref<{ repo: RepoView; gitRef: string | null } | null>(null)
 const now = ref(new Date())
 const loading = ref(false)
 let pollFailed = false
@@ -196,6 +201,8 @@ onUnmounted(() => {
               @push="act('push', { path: repo.path })"
               @commit="committing = repo"
               @clear-error="act('clear_error', { path: repo.path })"
+              @branches="branchesOf = repo"
+              @history="historyOf = { repo, gitRef: null }"
             />
           </ul>
         </section>
@@ -208,6 +215,21 @@ onUnmounted(() => {
       :can-push="committing.remote_url !== null"
       @close="committing = null"
       @submit="commit"
+    />
+    <BranchesDialog
+      v-if="branchesOf"
+      :repo="branchesOf"
+      :now="now"
+      @close="branchesOf = null"
+      @open="(gitRef) => branchesOf && (historyOf = { repo: branchesOf, gitRef })"
+    />
+    <CommitsDialog
+      v-if="historyOf"
+      :key="`${historyOf.repo.path}|${historyOf.gitRef}`"
+      :repo="historyOf.repo"
+      :git-ref="historyOf.gitRef"
+      :now="now"
+      @close="historyOf = null"
     />
   </div>
 </template>

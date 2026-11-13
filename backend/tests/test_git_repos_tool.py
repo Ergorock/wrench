@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from git_fixtures import make_clone, make_remote
+from git_fixtures import commit_file, git, make_clone, make_remote
 
 from wrench.sdk import ToolContext, ToolError, ToolStorage
 from wrench.shared.git import ops
@@ -240,3 +240,51 @@ def test_commit_while_busy_is_refused(
     assert svc._jobs.wait_idle(30)
     assert e.value.code == "busy"
     assert svc.invoke("get_state", {})["repos"][0]["untracked"] == 1
+
+
+def test_get_branches(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "Dev"
+    r = make_clone(make_remote(tmp_path), root / "p")
+    git(r, "switch", "-c", "feature/x")
+    commit_file(r, "x.txt", "x", "x")
+    svc = _configured(ctx, root)
+    branches = svc.invoke("get_branches", {"path": str(r)})
+    assert branches["main"] == "main"
+    assert [b["name"] for b in branches["local"]] == ["feature/x", "main"]
+    assert branches["local"][0]["commits_not_in_main"] == 1
+    assert [b["name"] for b in branches["remote"]] == ["origin/main"]
+
+
+def test_get_commits(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "Dev"
+    r = make_clone(make_remote(tmp_path), root / "p")
+    commit_file(r, "a.txt", "a", "local")
+    svc = _configured(ctx, root)
+    commits = svc.invoke("get_commits", {"path": str(r)})
+    assert [(c["subject"], c["unpushed"]) for c in commits] == [("local", True), ("initial", False)]
+    assert svc.invoke("get_commits", {"path": str(r), "ref": "origin/main", "skip": 1}) == []
+
+
+def test_history_actions_errors(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "Dev"
+    r = make_clone(make_remote(tmp_path), root / "p")
+    svc = _configured(ctx, root)
+    for action, payload, code in (
+        ("get_branches", {"path": r"C:\nope"}, "unknown_repo"),
+        ("get_commits", {"path": r"C:\nope"}, "unknown_repo"),
+        ("get_commits", {"path": str(r), "ref": "--all"}, "unknown_ref"),
+        ("get_commits", {"path": str(r), "skip": -1}, "invalid_payload"),
+    ):
+        with pytest.raises(ToolError) as e:
+            svc.invoke(action, payload)
+        assert e.value.code == code
+
+
+def test_state_has_web_url(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "Dev"
+    local = make_clone(make_remote(tmp_path), root / "local")
+    hosted = make_clone(make_remote(tmp_path / "r2"), root / "hosted")
+    git(hosted, "remote", "set-url", "origin", "git@github.com:owner/repo.git")
+    repos = {r["name"]: r for r in _configured(ctx, root).invoke("get_state", {})["repos"]}
+    assert repos[local.name]["web_url"] is None
+    assert repos[hosted.name]["web_url"] == "https://github.com/owner/repo"

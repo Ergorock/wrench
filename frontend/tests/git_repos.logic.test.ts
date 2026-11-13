@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   availableActions,
+  branchTitle,
   filterRepos,
+  hostTitle,
+  mergeLabel,
   needsAttention,
   relativeTime,
   sortRepos,
 } from '../src/tools/git_repos/logic'
-import type { RepoView } from '../src/tools/git_repos/types'
+import type { LocalBranch, RepoView } from '../src/tools/git_repos/types'
 import enTool from '../src/tools/git_repos/i18n/en.json'
 import frTool from '../src/tools/git_repos/i18n/fr.json'
 
@@ -15,6 +18,7 @@ const base = (o: Partial<RepoView> = {}): RepoView => ({
   root: 'r',
   name: 'n',
   rel_path: 'n',
+  web_url: null,
   branch: 'main',
   detached: false,
   upstream: 'origin/main',
@@ -95,6 +99,42 @@ describe('git_repos logic', () => {
   })
 })
 
+describe('git_repos infobulles et libellés', () => {
+  const t = (k: string, p: object = {}, n?: number) => `${k}${JSON.stringify(p)}${n ?? ''}`
+
+  it('icône d’hôte : libellé, puis adresse web sans protocole si connue', () => {
+    expect(hostTitle(base({ web_url: 'https://github.com/owner/repo' }), t)).toBe(
+      'badges.hostTitleUrl{"label":"badges.hostTitle.github{}","url":"github.com/owner/repo"}',
+    )
+    expect(hostTitle(base({ host: 'other', web_url: null }), t)).toBe('badges.hostTitle.other{}')
+  })
+
+  it('branche : suivie, sans branche suivie, tête détachée', () => {
+    expect(branchTitle(base(), t)).toBe('badges.branchTitle.tracking{"branch":"main","upstream":"origin/main"}')
+    expect(branchTitle(base({ upstream: null }), t)).toBe('badges.branchTitle.untracked{"branch":"main"}')
+    expect(branchTitle(base({ branch: null, detached: true, upstream: null }), t)).toBe(
+      'badges.branchTitle.detached{}',
+    )
+  })
+
+  it('fusionnée, +N commits, ou rien sans branche principale', () => {
+    const b = (o: Partial<LocalBranch>): LocalBranch => ({
+      name: 'x',
+      current: false,
+      upstream: null,
+      ahead: 0,
+      behind: 0,
+      merged: null,
+      commits_not_in_main: null,
+      last_commit: null,
+      ...o,
+    })
+    expect(mergeLabel(b({ merged: true, commits_not_in_main: 0 }), t)).toBe('branches.merged{}')
+    expect(mergeLabel(b({ merged: false, commits_not_in_main: 3 }), t)).toBe('branches.notInMain{"n":3}3')
+    expect(mergeLabel(b({}), t)).toBe('')
+  })
+})
+
 function flatKeys(o: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(o).flatMap(([k, v]) =>
     v !== null && typeof v === 'object' ? flatKeys(v as Record<string, unknown>, `${prefix}${k}.`) : [`${prefix}${k}`],
@@ -104,7 +144,7 @@ function flatKeys(o: Record<string, unknown>, prefix = ''): string[] {
 describe('git_repos i18n', () => {
   it('fr et en ont les mêmes clés', () => expect(flatKeys(frTool).sort()).toEqual(flatKeys(enTool).sort()))
 
-  it('traduit les 13 codes d’erreur', () => {
+  it('traduit les 14 codes d’erreur', () => {
     const codes = [
       'not_a_repo',
       'diverged',
@@ -119,6 +159,7 @@ describe('git_repos i18n', () => {
       'unknown_repo',
       'git_not_found',
       'busy',
+      'unknown_ref',
     ]
     for (const c of codes) expect(flatKeys(frTool)).toContain(`errors.${c}`)
   })

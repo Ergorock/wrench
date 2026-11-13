@@ -1,4 +1,6 @@
-import type { RepoView } from './types'
+import type { LocalBranch, RepoView } from './types'
+
+type Translate = (k: string, p?: object, n?: number) => string
 
 export interface RepoActions {
   fetch: boolean
@@ -78,4 +80,24 @@ export function relativeTime(
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return t('relative.hours', { n: hours })
   return t('relative.days', { n: Math.floor(hours / 24) })
+}
+
+/** Tooltip of the host icon: kind of hosting, then the web address when known. */
+export function hostTitle(r: RepoView, t: Translate): string {
+  const label = t(`badges.hostTitle.${r.host}`)
+  if (r.web_url === null) return label
+  return t('badges.hostTitleUrl', { label, url: r.web_url.replace(/^https?:\/\//, '') })
+}
+
+export function branchTitle(r: RepoView, t: Translate): string {
+  if (r.detached || r.branch === null) return t('badges.branchTitle.detached')
+  if (r.upstream === null) return t('badges.branchTitle.untracked', { branch: r.branch })
+  return t('badges.branchTitle.tracking', { branch: r.branch, upstream: r.upstream })
+}
+
+/** « ✓ merged » or « +N commits » against the main branch; empty without a main branch. */
+export function mergeLabel(b: LocalBranch, t: Translate): string {
+  if (b.merged === null || b.commits_not_in_main === null) return ''
+  if (b.merged) return t('branches.merged')
+  return t('branches.notInMain', { n: b.commits_not_in_main }, b.commits_not_in_main)
 }
