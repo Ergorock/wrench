@@ -13,6 +13,8 @@ from git_fixtures import commit_file, git, make_clone, make_remote
 
 from wrench.sdk import ToolContext, ToolError, ToolStorage
 from wrench.shared.editors import Editor
+from wrench.shared.git import ops
+from wrench.shared.git.ops import GitOpError
 from wrench.shared.git.runner import GitNotFound
 from wrench.tools.projects.service import ProjectsService
 
@@ -640,3 +642,24 @@ def test_create_failure_reported(
     assert state["creation"]["created"] is None
     assert not (root / "N").exists()
     assert state["tree"]["projects"] == []
+
+
+def test_create_git_failure_keeps_the_folder(
+    ctx: ToolContext, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "dev"
+    root.mkdir()
+    svc = creating(ctx, root, make_templates(tmp_path))
+
+    def failing_init(_repo: Path) -> None:
+        raise GitOpError("git_failed", "init failed")
+
+    monkeypatch.setattr(ops, "init_repo", failing_init)
+    svc.invoke(
+        "create_project", {"template": "Basic", "name": "N", "parent_rel": "", "remote_url": None}
+    )
+    state = created(svc)
+    assert state["creation"]["error"]["code"] == "git_failed"
+    assert state["creation"]["created"] == str(root / "N")
+    assert (root / "N" / "README.md").is_file()
+    assert [p["name"] for p in state["tree"]["projects"]] == ["N"]

@@ -62,3 +62,16 @@ def test_copy_failure_cleans_up(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         copy_template(src, dest)
     assert e.value.code == "copy_failed"
     assert not dest.exists()
+
+
+def test_copy_never_removes_a_folder_it_did_not_create(tmp_path: Path) -> None:
+    src = tmp_path / "tpl"
+    src.mkdir()
+    (src / "a.txt").write_text("x", "utf-8")
+    dest = tmp_path / "out"
+    dest.mkdir()
+    (dest / "marker.txt").write_text("mine", "utf-8")
+    with pytest.raises(ToolError) as e:
+        copy_template(src, dest)
+    assert e.value.code == "copy_failed"
+    assert (dest / "marker.txt").read_text("utf-8") == "mine"

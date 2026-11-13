@@ -43,6 +43,9 @@ def copy_template(src: Path, dest: Path) -> None:
 
     try:
         shutil.copytree(src, dest, ignore=ignore)
+    except FileExistsError as exc:
+        # `dest` appeared after the caller's check: it is not ours, never remove it.
+        raise ToolError("copy_failed", f"The target already exists: {exc}") from exc
     except OSError as exc:
         if dest.exists():
             shutil.rmtree(dest, onexc=_force_remove)
