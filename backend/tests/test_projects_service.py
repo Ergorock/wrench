@@ -1,0 +1,238 @@
+import logging
+import os
+import shutil
+import stat
+import time
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+import pytest
+from git_fixtures import commit_file, git, make_clone, make_remote
+
+from wrench.sdk import ToolContext, ToolError, ToolStorage
+from wrench.shared.git.runner import GitNotFound
+from wrench.tools.projects.service import ProjectsService
+
+pytestmark = pytest.mark.usefixtures("git_env")
+
+
+@pytest.fixture
+def ctx(tmp_path: Path) -> ToolContext:
+    return ToolContext(
+        "projects",
+        ToolStorage(tmp_path / "data" / "projects.json"),
+        lambda: "en",
+        logging.getLogger("test"),
+    )
+
+
+def wait_until(check: Callable[[], bool], timeout: float = 15.0) -> None:
+    end = time.monotonic() + timeout
+    while not check():
+        assert time.monotonic() < end, "timeout"
+        time.sleep(0.02)
+
+
+def settled(svc: ProjectsService) -> dict[str, Any]:
+    wait_until(lambda: not svc.invoke("get_state", {})["scanning"])
+    state: dict[str, Any] = svc.invoke("get_state", {})
+    return state
+
+
+def idle(svc: ProjectsService) -> dict[str, Any]:
+    wait_until(
+        lambda: all(v["running"] is None for v in svc.invoke("get_state", {})["git"].values())
+    )
+    state: dict[str, Any] = svc.invoke("get_state", {})
+    return state
+
+
+def make_git_project(root: Path, name: str) -> Path:
+    path = root / name
+    path.mkdir(parents=True)
+    git(path, "init", "-b", "main")
+    commit_file(path, "README.md", "x", "init")
+    return path
+
+
+def force_remove(func: Callable[[str], Any], path: str, _exc: BaseException) -> None:
+    """git marks its object files read-only, which Windows refuses to delete."""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
+def configured(ctx: ToolContext, root: Path, **kw: Any) -> ProjectsService:
+    svc = ProjectsService(ctx, **kw)
+    svc.invoke("set_config", {"root": str(root), "templates_dir": None, "max_depth": 4})
+    settled(svc)
+    return svc
+
+
+def test_config_defaults_and_bounds(ctx: ToolContext) -> None:
+    svc = ProjectsService(ctx)
+    assert svc.invoke("get_config", {}) == {
+        "root": None,
+        "templates_dir": None,
+        "max_depth": 4,
+        "root_missing": False,
+        "templates_missing": False,
+    }
+    for bad in (0, 7):
+        with pytest.raises(ToolError) as e:
+            svc.invoke("set_config", {"root": None, "templates_dir": None, "max_depth": bad})
+        assert e.value.code == "invalid_payload"
+
+
+def test_config_reports_missing_folders(ctx: ToolContext, tmp_path: Path) -> None:
+    svc = ProjectsService(ctx)
+    cfg = svc.invoke(
+        "set_config",
+        {"root": str(tmp_path / "nope"), "templates_dir": str(tmp_path / "t"), "max_depth": 3},
+    )
+    assert cfg["root_missing"] and cfg["templates_missing"] and cfg["max_depth"] == 3
+    state = settled(svc)
+    assert state["tree"] is None and state["scan_error"] is None
+
+
+def test_set_config_keeps_project_data(ctx: ToolContext, tmp_path: Path) -> None:
+    ctx.storage.save({"projects": {"k": {"build_command": "make"}}})
+    svc = ProjectsService(ctx)
+    svc.invoke("set_config", {"root": str(tmp_path), "templates_dir": None, "max_depth": 2})
+    settled(svc)
+    assert ctx.storage.load()["projects"] == {"k": {"build_command": "make"}}
+    assert ctx.storage.load()["max_depth"] == 2
+
+
+def test_scan_runs_in_background_and_lists_tree(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    make_git_project(root / "M3", "Liste")
+    (root / "plain").mkdir()
+    ctx.storage.save({"root": str(root), "max_depth": 4})
+    svc = ProjectsService(ctx)
+    first = svc.invoke("get_state", {})  # starts the first scan
+    assert first["git_available"] is True
+    state = settled(svc)
+    assert state["tree"]["project_count"] == 1
+    assert [f["name"] for f in state["tree"]["folders"]] == ["M3", "plain"]
+    assert state["git"] == {} and state["creation"] is None
+
+
+def test_rescan_during_scan_ends_with_fresh_tree(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    make_git_project(root, "a")
+    svc = configured(ctx, root)
+    for _ in range(5):
+        svc.invoke("rescan", {})
+    make_git_project(root, "b")
+    svc.invoke("rescan", {})
+    wait_until(lambda: svc.invoke("get_state", {})["tree"]["project_count"] == 2)
+    assert settled(svc)["scanning"] is False
+
+
+def test_load_status_reads_only_requested_git_projects(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+    make_git_project(root, "b")
+    (root / "plain").mkdir()
+    (root / "plain" / "README.md").touch()
+    svc = configured(ctx, root)
+    svc.invoke("load_status", {"paths": [str(a), str(root / "plain")]})
+    state = idle(svc)
+    assert list(state["git"]) == [str(a)]
+    view = state["git"][str(a)]
+    assert view["branch"] == "main" and view["name"] == "a" and view["rel_path"] == "a"
+    assert view["root"] == str(root) and view["error"] is None and view["running"] is None
+
+
+def test_load_status_error_isolated(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+    b = make_git_project(root, "b")
+    svc = configured(ctx, root)
+    shutil.rmtree(a, onerror=force_remove)
+    svc.invoke("load_status", {"paths": [str(a), str(b)]})
+    state = idle(svc)
+    assert state["git"][str(a)]["error"] is not None
+    assert state["git"][str(b)]["error"] is None
+    assert state["git"][str(b)]["branch"] == "main"
+
+
+def test_rescan_clears_git_cache(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+    svc = configured(ctx, root)
+    svc.invoke("load_status", {"paths": [str(a)]})
+    assert list(idle(svc)["git"]) == [str(a)]
+    svc.invoke("rescan", {})
+    assert settled(svc)["git"] == {}
+
+
+def test_not_a_project(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    make_git_project(root, "a")
+    svc = configured(ctx, root)
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    for action, payload in [
+        ("push", {"path": str(other)}),
+        ("commit", {"path": str(other), "message": "m"}),
+        ("set_remote", {"path": str(other), "url": "https://h/a/b"}),
+        ("clear_error", {"path": str(other)}),
+        ("load_status", {"paths": [str(other)]}),
+    ]:
+        with pytest.raises(ToolError) as e:
+            svc.invoke(action, payload)
+        assert e.value.code == "not_a_project", action
+
+
+def test_set_remote_adds_origin_and_refuses_existing(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+    b = make_git_project(root, "b")
+    svc = configured(ctx, root)
+    state = svc.invoke("set_remote", {"path": str(a), "url": "https://example.org/t/a.git"})
+    assert state["git"][str(a)]["remote_url"] == "https://example.org/t/a.git"
+    assert state["git"][str(a)]["web_url"] == "https://example.org/t/a"
+    with pytest.raises(ToolError) as e:
+        svc.invoke("set_remote", {"path": str(a), "url": "https://example.org/t/b.git"})
+    assert e.value.code == "remote_exists"
+    with pytest.raises(ToolError) as e:
+        svc.invoke("set_remote", {"path": str(b), "url": "--upload-pack=x"})
+    assert e.value.code == "invalid_url"
+
+
+def test_commit_and_push(ctx: ToolContext, tmp_path: Path) -> None:
+    rem = make_remote(tmp_path)
+    root = tmp_path / "dev"
+    a = make_clone(rem, root / "a")
+    svc = configured(ctx, root)
+    (a / "new.txt").write_text("x", "utf-8")
+    svc.invoke("commit", {"path": str(a), "message": "add", "push": True})
+    state = idle(svc)
+    assert state["git"][str(a)]["error"] is None
+    assert git(rem, "log", "--format=%s", "-1") == "add"
+    with pytest.raises(ToolError) as e:
+        svc.invoke("commit", {"path": str(a), "message": "  "})
+    assert e.value.code == "empty_message"
+    svc.invoke("commit", {"path": str(a), "message": "again"})
+    state = idle(svc)
+    assert state["git"][str(a)]["error"]["code"] == "nothing_to_commit"
+    state = svc.invoke("clear_error", {"path": str(a)})
+    assert state["git"][str(a)]["error"] is None
+
+
+def test_git_missing(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+
+    def no_git() -> str:
+        raise GitNotFound("no git")
+
+    svc = configured(ctx, root, git_finder=no_git)
+    state = settled(svc)
+    assert state["git_available"] is False
+    assert state["tree"]["project_count"] == 1
+    with pytest.raises(ToolError) as e:
+        svc.invoke("push", {"path": str(a)})
+    assert e.value.code == "git_not_found"

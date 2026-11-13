@@ -52,3 +52,19 @@ def web_url(url: str | None) -> str | None:
         netloc = f"{host}:{port}" if port else host
         return f"{parts.scheme}://{netloc}/{path}"
     return f"https://{host}/{path}"
+
+
+def is_remote_url(url: str) -> bool:
+    """`https://host/path`, `ssh://[user@]host[:port]/path` or `user@host:path`. Refuses
+    whitespace, control characters, a leading `-` and a missing path."""
+    if not url or url.startswith("-") or any(c.isspace() or not c.isprintable() for c in url):
+        return False
+    if "://" not in url:
+        match = _SCP.match(url)
+        return bool(match and match["user"] and match["path"].strip("/"))
+    try:
+        parts = urlsplit(url)
+        parts.port  # noqa: B018 - raises ValueError on a bad port
+    except ValueError:
+        return False
+    return parts.scheme in ("https", "ssh") and bool(parts.hostname) and bool(parts.path.strip("/"))

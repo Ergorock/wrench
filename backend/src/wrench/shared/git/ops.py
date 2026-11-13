@@ -3,10 +3,20 @@
 from pathlib import Path
 
 from wrench.shared.git.errors import GitOpError, classify_error, run_or_raise
+from wrench.shared.git.remote import is_remote_url
 from wrench.shared.git.runner import COMMIT_TIMEOUT, NETWORK_TIMEOUT
 from wrench.shared.git.status import RepoStatus, read_status
 
-__all__ = ["GitOpError", "classify_error", "fetch", "pull", "push", "commit_all"]
+__all__ = [
+    "GitOpError",
+    "classify_error",
+    "fetch",
+    "pull",
+    "push",
+    "commit_all",
+    "add_origin",
+    "init_repo",
+]
 
 
 def _require_remote(status: RepoStatus) -> None:
@@ -61,3 +71,16 @@ def commit_all(repo: Path, message: str) -> None:
         raise GitOpError("nothing_to_commit", "Nothing to commit")
     run_or_raise(repo, ["add", "-A"], COMMIT_TIMEOUT)
     run_or_raise(repo, ["commit", "-m", message], COMMIT_TIMEOUT)
+
+
+def init_repo(repo: Path) -> None:
+    run_or_raise(repo, ["init"], COMMIT_TIMEOUT)
+
+
+def add_origin(repo: Path, url: str) -> None:
+    """Adds `origin`; never replaces an existing remote."""
+    if not is_remote_url(url):
+        raise GitOpError("invalid_url", "Not a valid remote URL")
+    if "origin" in run_or_raise(repo, ["remote"], COMMIT_TIMEOUT).split():
+        raise GitOpError("remote_exists", "The repository already has an origin")
+    run_or_raise(repo, ["remote", "add", "--end-of-options", "origin", url], COMMIT_TIMEOUT)

@@ -4,7 +4,16 @@ from pathlib import Path
 import pytest
 from git_fixtures import commit_file, git, make_clone, make_remote
 
-from wrench.shared.git.ops import GitOpError, classify_error, commit_all, fetch, pull, push
+from wrench.shared.git.ops import (
+    GitOpError,
+    add_origin,
+    classify_error,
+    commit_all,
+    fetch,
+    init_repo,
+    pull,
+    push,
+)
 from wrench.shared.git.status import read_status
 
 pytestmark = pytest.mark.usefixtures("git_env")
@@ -180,3 +189,26 @@ def test_push_rejected_when_diverged(tmp_path: Path) -> None:
     with pytest.raises(GitOpError) as e:
         push(b)
     assert e.value.code == "diverged"
+
+
+def test_init_repo_then_add_origin(tmp_path: Path) -> None:
+    repo = tmp_path / "new"
+    repo.mkdir()
+    init_repo(repo)
+    assert (repo / ".git").exists()
+    add_origin(repo, "https://example.org/team/app.git")
+    assert git(repo, "remote", "get-url", "origin") == "https://example.org/team/app.git"
+    with pytest.raises(GitOpError) as e:
+        add_origin(repo, "https://example.org/other.git")
+    assert e.value.code == "remote_exists"
+    assert git(repo, "remote", "get-url", "origin") == "https://example.org/team/app.git"
+
+
+def test_add_origin_refuses_option_like_url(tmp_path: Path) -> None:
+    repo = tmp_path / "new"
+    repo.mkdir()
+    init_repo(repo)
+    with pytest.raises(GitOpError) as e:
+        add_origin(repo, "--upload-pack=x")
+    assert e.value.code == "invalid_url"
+    assert git(repo, "remote") == ""
