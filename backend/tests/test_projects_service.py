@@ -345,6 +345,9 @@ def test_launch_actions_refuse_unknown_path(ctx: ToolContext, tmp_path: Path) ->
         ("get_build", {}),
         ("set_build", {"command": "x"}),
         ("run_build", {}),
+        ("get_run", {}),
+        ("set_run", {"command": "x"}),
+        ("run_run", {}),
         ("open_repo_page", {}),
     ):
         with pytest.raises(ToolError) as exc:
@@ -376,9 +379,7 @@ def test_open_folder_of_the_inventory(ctx: ToolContext, tmp_path: Path) -> None:
     assert spawned.consoles == [False, False, False]
 
 
-def test_open_folder_refuses_outside_inventory_or_deleted(
-    ctx: ToolContext, tmp_path: Path
-) -> None:
+def test_open_folder_refuses_outside_inventory_or_deleted(ctx: ToolContext, tmp_path: Path) -> None:
     svc, spawned, a = launch_service(ctx, tmp_path)
     svc.invoke("get_state", {})
     settled(svc)
@@ -415,6 +416,40 @@ def test_build_saved_suggested_and_cleared(ctx: ToolContext, tmp_path: Path) -> 
     with pytest.raises(ToolError) as exc:
         svc.invoke("run_build", {"path": str(a)})
     assert exc.value.code == "no_build_command"
+
+
+def test_run_saved_suggested_and_cleared(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    assert svc.invoke("get_run", {"path": str(a)}) == {"command": None, "suggested": None}
+    info = svc.invoke("set_run", {"path": str(a), "command": "  python -m wrench  "})
+    assert info == {"command": "python -m wrench", "suggested": None}
+    assert svc.invoke("get_run", {"path": str(a)})["command"] == "python -m wrench"
+    svc.invoke("run_run", {"path": str(a)})
+    assert spawned.calls == [
+        (
+            [
+                "powershell",
+                "-NoExit",
+                "-Command",
+                f"Set-Location -LiteralPath '{a}'; python -m wrench",
+            ],
+            a,
+        )
+    ]
+    assert spawned.consoles == [True]
+    assert svc.invoke("set_run", {"path": str(a), "command": "  "})["command"] is None
+    with pytest.raises(ToolError) as exc:
+        svc.invoke("run_run", {"path": str(a)})
+    assert exc.value.code == "no_run_command"
+    assert svc.invoke("get_build", {"path": str(a)})["command"] is None
+
+
+def test_run_run_uses_suggestion(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    (a / "package.json").write_text('{"scripts": {"dev": "x"}}', encoding="utf-8")
+    svc.invoke("run_run", {"path": str(a)})
+    assert spawned.calls[-1][0][-1] == f"Set-Location -LiteralPath '{a}'; npm run dev"
+    assert spawned.consoles == [True]
 
 
 def test_run_build_with_wt_escapes_semicolons(ctx: ToolContext, tmp_path: Path) -> None:

@@ -19,7 +19,7 @@ from wrench.shared.git.ops import GitOpError
 from wrench.shared.git.remote import is_remote_url, web_url
 from wrench.shared.git.runner import GitNotFound, find_git
 from wrench.shared.git.status import RepoStatus, read_status
-from wrench.tools.projects.build import suggest_build
+from wrench.tools.projects.build import suggest_build, suggest_run
 from wrench.tools.projects.launch import Spawner, find_wt, spawn, terminal_args
 from wrench.tools.projects.requirements import Requirement, Runner, check, run_version
 from wrench.tools.projects.scan import FolderEntry, ProjectEntry, flatten, scan, techs_of
@@ -64,6 +64,11 @@ class State(BaseModel):
 
 
 class BuildInfo(BaseModel):
+    command: str | None
+    suggested: str | None
+
+
+class RunInfo(BaseModel):
     command: str | None
     suggested: str | None
 
@@ -262,6 +267,12 @@ class ProjectsService(ToolService):
         saved = builds.get(_key(folder)) if isinstance(builds, dict) else None
         command = saved if isinstance(saved, str) and saved.strip() else None
         return BuildInfo(command=command, suggested=suggest_build(folder))
+
+    def _run_info(self, folder: Path) -> RunInfo:
+        runs = self.ctx.storage.load().get("runs")
+        saved = runs.get(_key(folder)) if isinstance(runs, dict) else None
+        command = saved if isinstance(saved, str) and saved.strip() else None
+        return RunInfo(command=command, suggested=suggest_run(folder))
 
     def _open_terminal(self, folder: Path, command: str | None) -> None:
         self._spawner(terminal_args(folder, command, self._wt_finder()), folder, True)
@@ -516,6 +527,34 @@ class ProjectsService(ToolService):
         command = info.command or info.suggested
         if command is None:
             raise ToolError("no_build_command", "No build command is saved or suggested")
+        self._open_terminal(folder, command)
+
+    @action
+    def get_run(self, path: str) -> RunInfo:
+        return self._run_info(self._folder(path))
+
+    @action
+    def set_run(self, path: str, command: str) -> RunInfo:
+        folder = self._folder(path)
+        data = self.ctx.storage.load()
+        raw = data.get("runs")
+        runs: dict[str, str] = dict(raw) if isinstance(raw, dict) else {}
+        if command.strip():
+            runs[_key(folder)] = command.strip()
+        else:
+            runs.pop(_key(folder), None)
+        data["runs"] = runs
+        self.ctx.storage.save(data)
+        return self._run_info(folder)
+
+    @action
+    def run_run(self, path: str) -> None:
+        """Runs the saved (else suggested) launch command in a new terminal window."""
+        folder = self._folder(path)
+        info = self._run_info(folder)
+        command = info.command or info.suggested
+        if command is None:
+            raise ToolError("no_run_command", "No run command is saved or suggested")
         self._open_terminal(folder, command)
 
     # --- requirements --------------------------------------------------------------
