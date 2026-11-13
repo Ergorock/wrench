@@ -16,6 +16,7 @@ SHGFI_ICON = 0x100
 SHGFI_LARGEICON = 0x0
 SHGFI_SMALLICON = 0x1
 SHGFI_PIDL = 0x8
+COINIT_APARTMENTTHREADED = 0x2
 DIB_RGB_COLORS = 0
 BI_RGB = 0
 
@@ -174,10 +175,15 @@ def _icon_png(target: str, size: int) -> bytes | None:
         ctypes.POINTER(wintypes.ULONG),
     ]
     ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    ole32.CoInitializeEx.argtypes = [ctypes.c_void_p, wintypes.DWORD]
+    ole32.CoInitializeEx.restype = ctypes.c_long
 
     flags = SHGFI_ICON | (SHGFI_SMALLICON if size <= 16 else SHGFI_LARGEICON)
     fi = SHFILEINFOW()
     pidl = ctypes.c_void_p()
+    # `shell:AppsFolder` items only resolve on a thread where COM is initialized.
+    # S_OK / S_FALSE must be balanced; a failure (e.g. another apartment model) is not.
+    com_ready = ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED) in (0, 1)
     try:
         if target.lower().startswith("shell:"):
             if shell32.SHParseDisplayName(target, None, ctypes.byref(pidl), 0, None) != 0:
@@ -192,6 +198,8 @@ def _icon_png(target: str, size: int) -> bytes | None:
     finally:
         if pidl.value:
             ole32.CoTaskMemFree(pidl)
+        if com_ready:
+            ole32.CoUninitialize()
     if not ok or not fi.hIcon:
         return None
     try:

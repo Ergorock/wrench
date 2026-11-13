@@ -1,5 +1,6 @@
 import io
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -26,3 +27,16 @@ def test_icon_png_notepad() -> None:
 
 def test_icon_png_missing_file(tmp_path: Path) -> None:
     assert icon_png(str(tmp_path / "absent.exe")) is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows API")
+def test_icon_png_shell_target_on_a_thread_without_com() -> None:
+    # SHParseDisplayName on `shell:AppsFolder` fails (path not found) unless COM is
+    # initialized on the calling thread; API worker threads do not do it.
+    result: list[bytes | None] = []
+    thread = threading.Thread(
+        target=lambda: result.append(icon_png(r"shell:AppsFolder\Microsoft.Windows.Explorer"))
+    )
+    thread.start()
+    thread.join()
+    assert result[0] is not None
