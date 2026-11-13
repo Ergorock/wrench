@@ -7,20 +7,30 @@ from pathlib import Path
 
 from wrench.sdk import ToolError
 
-Spawner = Callable[[list[str], Path | None], None]
+# (args, cwd, console): console=True opens a visible, interactive console window.
+Spawner = Callable[[list[str], Path | None, bool], None]
 
 
-def spawn(args: list[str], cwd: Path | None) -> None:
+def spawn(args: list[str], cwd: Path | None, console: bool = False) -> None:
     try:
-        subprocess.Popen(
-            args,
-            cwd=cwd,
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
-            close_fds=True,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        if console:
+            # A terminal keeps its own handles and window: not detached, no redirection.
+            subprocess.Popen(
+                args,
+                cwd=cwd,
+                creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP,
+                close_fds=True,
+            )
+        else:
+            subprocess.Popen(
+                args,
+                cwd=cwd,
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
     except OSError as exc:
         raise ToolError("launch_failed", str(exc)) from exc
 
@@ -34,7 +44,8 @@ def terminal_args(folder: Path, command: str | None, wt: str | None) -> list[str
     if wt:
         args = [wt, "-d", str(folder)]
         if command:
-            args += ["powershell", "-NoExit", "-Command", command]
+            # wt reads an unescaped `;` as its own command separator.
+            args += ["powershell", "-NoExit", "-Command", command.replace(";", r"\;")]
         return args
     quoted = str(folder).replace("'", "''")
     script = f"Set-Location -LiteralPath '{quoted}'" + (f"; {command}" if command else "")

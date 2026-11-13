@@ -281,9 +281,11 @@ def test_push_busy(ctx: ToolContext, tmp_path: Path) -> None:
 class Spawned:
     def __init__(self) -> None:
         self.calls: list[tuple[list[str], Path | None]] = []
+        self.consoles: list[bool] = []
 
-    def __call__(self, args: list[str], cwd: Path | None) -> None:
+    def __call__(self, args: list[str], cwd: Path | None, console: bool) -> None:
         self.calls.append((args, cwd))
+        self.consoles.append(console)
 
 
 def launch_service(
@@ -355,6 +357,7 @@ def test_open_explorer_and_terminal(ctx: ToolContext, tmp_path: Path) -> None:
     svc.invoke("open_terminal", {"path": str(a)})
     assert spawned.calls[0] == (["explorer.exe", str(a)], None)
     assert spawned.calls[1][0][:3] == ["powershell", "-NoExit", "-Command"]
+    assert spawned.consoles == [False, True]
 
 
 def test_open_terminal_prefers_wt(ctx: ToolContext, tmp_path: Path) -> None:
@@ -362,6 +365,7 @@ def test_open_terminal_prefers_wt(ctx: ToolContext, tmp_path: Path) -> None:
     svc._wt_finder = lambda: "wt.exe"  # noqa: SLF001
     svc.invoke("open_terminal", {"path": str(a)})
     assert spawned.calls == [(["wt.exe", "-d", str(a)], a)]
+    assert spawned.consoles == [True]
 
 
 def test_build_saved_suggested_and_cleared(ctx: ToolContext, tmp_path: Path) -> None:
@@ -371,11 +375,49 @@ def test_build_saved_suggested_and_cleared(ctx: ToolContext, tmp_path: Path) -> 
     info = svc.invoke("set_build", {"path": str(a), "command": f"  {command}  "})
     assert info == {"command": command, "suggested": None}
     svc.invoke("run_build", {"path": str(a)})
-    assert spawned.calls[-1][0][-1].endswith(f"; {command}")
+    assert spawned.calls == [
+        (["powershell", "-NoExit", "-Command", f"Set-Location -LiteralPath '{a}'; {command}"], a)
+    ]
+    assert spawned.consoles == [True]
     assert svc.invoke("set_build", {"path": str(a), "command": "  "})["command"] is None
     with pytest.raises(ToolError) as exc:
         svc.invoke("run_build", {"path": str(a)})
     assert exc.value.code == "no_build_command"
+
+
+def test_run_build_with_wt_escapes_semicolons(ctx: ToolContext, tmp_path: Path) -> None:
+    svc, spawned, a = launch_service(ctx, tmp_path)
+    svc._wt_finder = lambda: "wt.exe"  # noqa: SLF001
+    command = 'npm run build -- --mode "prod x"; echo ok'
+    svc.invoke("set_build", {"path": str(a), "command": command})
+    svc.invoke("run_build", {"path": str(a)})
+    escaped = 'npm run build -- --mode "prod x"\\; echo ok'
+    assert spawned.calls == [
+        (["wt.exe", "-d", str(a), "powershell", "-NoExit", "-Command", escaped], a)
+    ]
+    assert spawned.consoles == [True]
+
+
+def test_run_build_apostrophe_path_fallback(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    folder = root / "l'été"
+    folder.mkdir(parents=True)
+    (folder / "go.mod").write_text("", encoding="utf-8")
+    spawned = Spawned()
+    svc = configured(ctx, root, spawner=spawned, wt_finder=lambda: None)
+    svc.invoke("run_build", {"path": str(folder)})
+    quoted = str(folder).replace("'", "''")
+    assert spawned.calls == [
+        (
+            [
+                "powershell",
+                "-NoExit",
+                "-Command",
+                f"Set-Location -LiteralPath '{quoted}'; go build ./...",
+            ],
+            folder,
+        )
+    ]
 
 
 def test_set_build_empty_returns_to_suggestion(ctx: ToolContext, tmp_path: Path) -> None:
@@ -385,7 +427,7 @@ def test_set_build_empty_returns_to_suggestion(ctx: ToolContext, tmp_path: Path)
     info = svc.invoke("set_build", {"path": str(a), "command": ""})
     assert info == {"command": None, "suggested": "uv build"}
     svc.invoke("run_build", {"path": str(a)})
-    assert spawned.calls[-1][0][-1].endswith("; uv build")
+    assert spawned.calls[-1][0][-1] == f"Set-Location -LiteralPath '{a}'; uv build"
 
 
 def test_get_editors_marks_availability(ctx: ToolContext, tmp_path: Path) -> None:

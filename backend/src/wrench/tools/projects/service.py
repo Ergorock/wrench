@@ -246,7 +246,7 @@ class ProjectsService(ToolService):
         return BuildInfo(command=command, suggested=suggest_build(folder))
 
     def _open_terminal(self, folder: Path, command: str | None) -> None:
-        self._spawner(terminal_args(folder, command, self._wt_finder()), folder)
+        self._spawner(terminal_args(folder, command, self._wt_finder()), folder, True)
 
     def _repo(self, entry: ProjectEntry) -> _Repo:
         key = _key(entry.path)
@@ -426,11 +426,11 @@ class ProjectsService(ToolService):
         editor = next((e for e in self.ctx.editors() if e.id == editor_id), None)
         if editor is None or not exe_exists(editor):
             raise ToolError("editor_missing", f"Editor not found: {editor_id}")
-        self._spawner(command_for(editor, folder), None)
+        self._spawner(command_for(editor, folder), None, False)
 
     @action
     def open_explorer(self, path: str) -> None:
-        self._spawner(["explorer.exe", str(self._folder(path))], None)
+        self._spawner(["explorer.exe", str(self._folder(path))], None, False)
 
     @action
     def open_terminal(self, path: str) -> None:

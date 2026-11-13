@@ -58,6 +58,25 @@ def test_spawn_is_detached(monkeypatch: pytest.MonkeyPatch) -> None:
     assert seen["creationflags"] == flags
 
 
+def test_spawn_console_keeps_window_and_handles(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(subprocess, "Popen", lambda args, **kw: seen.update(kw))
+    launch.spawn(["wt.exe"], Path("C:/d"), True)
+    flags = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
+    assert seen["creationflags"] == flags
+    assert not seen["creationflags"] & subprocess.DETACHED_PROCESS
+    assert not seen["creationflags"] & getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    for key in ("stdin", "stdout", "stderr"):
+        assert key not in seen
+
+
+def test_terminal_args_wt_escapes_semicolons() -> None:
+    args = terminal_args(Path(r"C:\Dev"), "npm run build; echo ok", "wt.exe")
+    assert args[-1] == "npm run build\; echo ok"
+    plain = terminal_args(Path(r"C:\Dev"), "npm run build; echo ok", None)
+    assert plain[-1].endswith("; npm run build; echo ok")
+
+
 def test_spawn_oserror_becomes_launch_failed(monkeypatch: pytest.MonkeyPatch) -> None:
     def boom(*_a: Any, **_k: Any) -> None:
         raise OSError("nope")
