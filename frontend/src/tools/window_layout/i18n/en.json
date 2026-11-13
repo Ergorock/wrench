@@ -1,0 +1,20 @@
+{
+  "name": "Window layout",
+  "description": "Remember where the open windows are, then put them back with one click.",
+  "openTitle": "Open windows",
+  "refresh": "Refresh",
+  "noOpen": "No visible window.",
+  "saveTitle": "Save the current layout",
+  "layoutName": "Layout name",
+  "save": "Save",
+  "layoutsTitle": "Saved layouts",
+  "noLayouts": "No layout saved yet.",
+  "savedAt": "saved on {date} · {count} window(s)",
+  "restore": "Restore",
+  "delete": "Delete",
+  "confirmDelete": "Confirm",
+  "cancel": "Cancel",
+  "restored": "{count} window(s) put back.",
+  "missing": "Program(s) not open, not started: {list}",
+  "note": "Windows go back where they were. Closed programs are not started again, and virtual desktops are not taken into account."
+}

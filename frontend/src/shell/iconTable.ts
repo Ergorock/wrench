@@ -1,5 +1,6 @@
 import type { Component } from 'vue'
 import {
+  AppWindow,
   Box,
   BookOpen,
   Calculator,
@@ -24,6 +25,7 @@ import {
  * Keys are kebab-case Lucide names.
  */
 export const iconTable: Record<string, Component> = {
+  'app-window': AppWindow,
   box: Box,
   'book-open': BookOpen,
   calculator: Calculator,

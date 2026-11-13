@@ -1,0 +1,20 @@
+{
+  "name": "Disposition des fenêtres",
+  "description": "Mémoriser la position des fenêtres ouvertes, puis la restaurer d’un clic.",
+  "openTitle": "Fenêtres ouvertes",
+  "refresh": "Actualiser",
+  "noOpen": "Aucune fenêtre visible.",
+  "saveTitle": "Enregistrer la disposition actuelle",
+  "layoutName": "Nom de la disposition",
+  "save": "Enregistrer",
+  "layoutsTitle": "Dispositions enregistrées",
+  "noLayouts": "Aucune disposition enregistrée.",
+  "savedAt": "enregistrée le {date} · {count} fenêtre(s)",
+  "restore": "Restaurer",
+  "delete": "Supprimer",
+  "confirmDelete": "Confirmer",
+  "cancel": "Annuler",
+  "restored": "{count} fenêtre(s) replacée(s).",
+  "missing": "Programme(s) non ouvert(s), non lancés : {list}",
+  "note": "Les fenêtres sont replacées là où elles étaient. Les programmes fermés ne sont pas relancés, et les bureaux virtuels ne sont pas pris en compte."
+}
