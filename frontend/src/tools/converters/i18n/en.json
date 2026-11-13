@@ -1,0 +1,41 @@
+{
+  "name": "Converters",
+  "description": "Convert units of measure and currencies, with rates you type in yourself.",
+  "tabsLabel": "Conversion type",
+  "tabs": {
+    "units": "Units",
+    "currencies": "Currencies"
+  },
+  "category": "Quantity",
+  "categories": {
+    "length": "Length",
+    "mass": "Mass",
+    "volume": "Volume",
+    "area": "Area",
+    "speed": "Speed",
+    "data": "Data size",
+    "temperature": "Temperature"
+  },
+  "value": "Value",
+  "from": "From",
+  "to": "To",
+  "ratesTitle": "Exchange rates",
+  "ratesHint": "Rates are typed in by hand, no connection is used. Read them as: 1 {base} = rate of the currency.",
+  "noRates": "No rate entered yet.",
+  "removeRate": "Remove the rate for {code}",
+  "code": "Code (e.g. USD)",
+  "rateOf": "1 {base} is worth",
+  "date": "Rate date",
+  "addRate": "Add rate",
+  "convertTitle": "Convert",
+  "amount": "Amount",
+  "errors": {
+    "unknown_unit": "This unit does not exist for this quantity.",
+    "unknown_category": "This quantity does not exist.",
+    "invalid_value": "The value must be a number.",
+    "invalid_currency": "Invalid currency code: three uppercase letters, and not the euro.",
+    "invalid_rate": "The rate must be a number greater than zero.",
+    "invalid_date": "The rate date is invalid.",
+    "unknown_currency": "Unknown currency: add its rate first."
+  }
+}

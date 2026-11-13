@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import {
   Box,
+  Calculator,
   Code,
   Folder,
   FolderKanban,
@@ -20,6 +21,7 @@ import {
  */
 export const iconTable: Record<string, Component> = {
   box: Box,
+  calculator: Calculator,
   code: Code,
   folder: Folder,
   'folder-kanban': FolderKanban,
