@@ -1,0 +1,32 @@
+{
+  "name": "Lanceur de scripts",
+  "description": "Lancer, en un clic, des programmes et des scripts que vous avez enregistrés.",
+  "intro": "Seules les commandes que vous enregistrez peuvent être lancées. Aucun shell : les arguments sont passés tels quels, un par ligne. Délai maximum : 60 secondes.",
+  "add": "Nouvelle commande",
+  "name": "Nom",
+  "program": "Programme",
+  "programHint": "Chemin complet d’un .exe, ou nom d’un .exe présent dans le PATH. Les fichiers .bat, .cmd et .ps1 ne sont pas lancés directement.",
+  "browse": "Parcourir…",
+  "args": "Arguments (un par ligne)",
+  "argsPlaceholder": "--verbose\nC:\\dossier\\fichier.txt",
+  "cwd": "Dossier de travail (facultatif)",
+  "save": "Enregistrer",
+  "cancel": "Annuler",
+  "empty": "Aucune commande enregistrée pour l’instant.",
+  "inFolder": "dans {folder}",
+  "run": "Lancer",
+  "running": "En cours…",
+  "edit": "Modifier",
+  "delete": "Supprimer",
+  "confirmDelete": "Confirmer la suppression",
+  "timedOut": "Délai dépassé : le programme a été arrêté après 60 secondes.",
+  "exitCode": "Code de sortie : {code}",
+  "errors": {
+    "unknown_command": "Cette commande n’existe plus.",
+    "invalid_command": "Donnez un nom et un programme.",
+    "folder_not_found": "Ce dossier n’existe pas.",
+    "too_many_commands": "La liste est pleine.",
+    "program_not_found": "Programme introuvable. Vérifiez le chemin ou le PATH.",
+    "program_failed": "Le programme n’a pas pu démarrer."
+  }
+}
