@@ -51,3 +51,8 @@ export const openUrl = (url: string): Promise<null> => unwrap(api().open_url(url
 
 export const pickFolder = (initial?: string): Promise<string | null> =>
   unwrap(api().pick_folder(initial ?? null))
+
+export const getAppIcon = (exe: string): Promise<string | null> => unwrap(api().get_app_icon(exe))
+
+export const pickExe = (initial?: string): Promise<string | null> =>
+  unwrap(api().pick_exe(initial ?? null))

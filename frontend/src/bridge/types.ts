@@ -25,6 +25,13 @@ export interface UpdateSettings {
   last_check: string | null
 }
 
+export interface Editor {
+  id: string
+  name: string
+  exe: string
+  args: string[]
+}
+
 export interface Settings {
   schema_version: 1
   language: Language
@@ -34,6 +41,7 @@ export interface Settings {
   tools: Record<string, ToolSettings>
   window: WindowSettings
   updates: UpdateSettings
+  editors: Editor[]
   last_tool: string | null
 }
 

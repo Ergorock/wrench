@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   BridgeError,
   checkForUpdates,
+  getAppIcon,
   getBootstrap,
   getUpdateStatus,
   installUpdate,
   openUrl,
+  pickExe,
   pickFolder,
   saveSettings,
   setAutostart,
@@ -110,5 +112,22 @@ describe('bridge client, pickFolder', () => {
     answer = null
     expect(await pickFolder()).toBeNull()
     expect(seen).toEqual([['C:\Users'], [null]])
+  })
+})
+
+describe('bridge client, applications', () => {
+  it('getAppIcon renvoie la data URL ou null, pickExe transmet le chemin initial', async () => {
+    const seen: unknown[][] = []
+    let icon: string | null = 'data:image/png;base64,AAAA'
+    mockApi({
+      get_app_icon: async (...a) => (seen.push(a), { ok: true, data: icon }),
+      pick_exe: async (...a) => (seen.push(a), { ok: true, data: null }),
+    })
+    expect(await getAppIcon('a.exe')).toBe('data:image/png;base64,AAAA')
+    icon = null
+    expect(await getAppIcon('b.exe')).toBeNull()
+    expect(await pickExe('C:\Apps')).toBeNull()
+    expect(await pickExe()).toBeNull()
+    expect(seen).toEqual([['a.exe'], ['b.exe'], ['C:\Apps'], [null]])
   })
 })

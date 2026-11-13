@@ -30,7 +30,24 @@
     "themes": { "light": "Clair", "dark": "Sombre", "system": "Système" },
     "toolVersion": "Version {version}",
     "languages": { "fr": "Français", "en": "English" },
-    "noTools": "Aucun outil n’est installé pour le moment."
+    "noTools": "Aucun outil n’est installé pour le moment.",
+    "editors": {
+      "title": "Éditeurs",
+      "description": "Applications proposées pour ouvrir un projet.",
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "name": "Nom",
+      "exe": "Exécutable",
+      "browse": "Parcourir…",
+      "args": "Arguments",
+      "argsHint": "Séparés par des espaces. {'{'}path{'}'} est remplacé par le dossier du projet.",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "empty": "Aucun éditeur configuré."
+    }
   },
   "updates": {
     "available": "La version {version} de Wrench est disponible.",

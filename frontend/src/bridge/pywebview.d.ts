@@ -12,6 +12,8 @@ declare global {
         install_update(): Promise<Envelope<unknown>>
         open_url(url: string): Promise<Envelope<unknown>>
         pick_folder(initial: string | null): Promise<Envelope<unknown>>
+        get_app_icon(exe: string): Promise<Envelope<unknown>>
+        pick_exe(initial: string | null): Promise<Envelope<unknown>>
         tool_call(toolId: string, action: string, payload?: object | null): Promise<Envelope<unknown>>
       }
     }

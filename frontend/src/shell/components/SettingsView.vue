@@ -7,6 +7,7 @@ import { lucideIcon } from '../icons'
 import { isToolEnabled } from '../sidebarOrder'
 import { useShell } from '../state'
 import { toastError } from '../toasts'
+import EditorsSettings from './EditorsSettings.vue'
 import UpdateSettings from './UpdateSettings.vue'
 
 type Tab = 'general' | 'appearance' | 'tools'
@@ -107,6 +108,7 @@ const checkedOf = (e: Event) => (e.target as HTMLInputElement).checked
         <p v-if="!autostart.available" class="hint">{{ t('settings.autostartUnavailable') }}</p>
       </div>
       <UpdateSettings />
+      <EditorsSettings />
     </div>
 
     <div v-else-if="tab === 'appearance'" class="panel" role="tabpanel">

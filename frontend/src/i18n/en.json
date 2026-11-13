@@ -30,7 +30,24 @@
     "themes": { "light": "Light", "dark": "Dark", "system": "System" },
     "toolVersion": "Version {version}",
     "languages": { "fr": "Français", "en": "English" },
-    "noTools": "No tools are installed yet."
+    "noTools": "No tools are installed yet.",
+    "editors": {
+      "title": "Editors",
+      "description": "Applications offered to open a project.",
+      "add": "Add",
+      "edit": "Edit",
+      "remove": "Delete",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "name": "Name",
+      "exe": "Executable",
+      "browse": "Browse…",
+      "args": "Arguments",
+      "argsHint": "Separated by spaces. {'{'}path{'}'} is replaced by the project folder.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No editors configured."
+    }
   },
   "updates": {
     "available": "Wrench {version} is available.",

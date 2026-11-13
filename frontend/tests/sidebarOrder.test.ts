@@ -26,6 +26,7 @@ function settings(
     tools: {},
     window: { x: null, y: null, width: 1100, height: 720, maximized: false },
     updates: { auto_check: true, last_check: null },
+    editors: [],
     last_tool: null,
     ...rest,
   }
