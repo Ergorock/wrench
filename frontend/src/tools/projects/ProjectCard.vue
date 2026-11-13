@@ -21,7 +21,8 @@ const emit = defineEmits<{ select: []; open: [editorId: string] }>()
 const { t } = useI18n()
 const badges = computed(() => gitBadges(props.git))
 const badgeText = (kind: string, n?: number): string => t(`${PREFIX}badges.${kind}`, { n })
-const badgeTitle = (kind: string, n?: number): string => t(`${PREFIX}badges.${kind}Title`, { n })
+const badgeTitle = (kind: string, n?: number): string =>
+  kind === 'error' ? (props.git?.error?.message ?? '') : t(`${PREFIX}badges.${kind}Title`, { n })
 const editorTitle = (e: EditorView): string =>
   t(`${PREFIX}editor.${e.available ? 'open' : 'missing'}`, { name: e.name })
 </script>
@@ -29,8 +30,10 @@ const editorTitle = (e: EditorView): string =>
 <template>
   <div class="project-card" :class="{ selected }" :data-project="project.path" @click="emit('select')">
     <div class="name">{{ project.name }}</div>
+    <div v-if="git?.branch" class="branch">{{ git.branch }}</div>
     <div v-if="showPath" class="path">{{ project.rel_path }}</div>
-    <div v-if="project.techs.length > 0" class="techs">
+    <div v-if="project.techs.length > 0 || project.is_template" class="techs">
+      <span v-if="project.is_template" class="tech template">{{ t(`${PREFIX}card.template`) }}</span>
       <span v-for="tech in project.techs" :key="tech" class="tech">{{ tech }}</span>
     </div>
     <div class="footer">
@@ -83,6 +86,7 @@ const editorTitle = (e: EditorView): string =>
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+.branch,
 .path {
   color: var(--text-muted);
   font-size: 12px;
@@ -115,7 +119,8 @@ const editorTitle = (e: EditorView): string =>
   font-size: 12px;
   color: var(--text-muted);
 }
-.badge.conflict {
+.badge.conflict,
+.badge.error {
   color: var(--danger);
 }
 .badge.ahead,

@@ -1,6 +1,6 @@
 import type { FolderEntry, GitView, ProjectEntry } from './types'
 
-export type Badge = { kind: 'changes' | 'ahead' | 'conflict' | 'clean'; n?: number }
+export type Badge = { kind: 'changes' | 'ahead' | 'conflict' | 'clean' | 'error'; n?: number }
 
 /** Lowercase, without accents. */
 export function normalize(s: string): string {
@@ -42,12 +42,14 @@ export function searchProjects(tree: FolderEntry, query: string): ProjectEntry[]
 export const needsTemplateConfirm = (p: ProjectEntry): boolean => p.is_template
 
 export function gitBadges(g: GitView | undefined): Badge[] {
-  // Nothing is known until the first read has ended.
-  if (!g || g.running !== null) return []
+  // Nothing is known until the first read has ended; a push or a commit keeps the last known state.
+  if (!g || g.running === 'status') return []
   const badges: Badge[] = []
   if (g.conflicts > 0) badges.push({ kind: 'conflict' })
   const changes = g.staged + g.unstaged + g.untracked
   if (changes > 0) badges.push({ kind: 'changes', n: changes })
   if (g.ahead > 0) badges.push({ kind: 'ahead', n: g.ahead })
+  // A failed read is never shown as clean.
+  if (g.error) badges.push({ kind: 'error' })
   return badges.length > 0 ? badges : [{ kind: 'clean' }]
 }

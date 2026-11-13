@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { i18n, setLanguage } from '../src/i18n'
 import { toasts } from '../src/shell/toasts'
@@ -227,5 +227,64 @@ describe('ProjectsTool, projet modèle', () => {
     await settle()
     expect(host.querySelector('[role="dialog"]')).toBeNull()
     expect(calls.find((c) => c.action === 'open_in')?.payload).toEqual({ path: 'C:\\Dev\\Alpha', editor_id: 'vscode' })
+  })
+})
+
+describe('ProjectsTool, carte', () => {
+  it('affiche la branche d’un projet git et l’étiquette Template d’un modèle', async () => {
+    current = {
+      ...baseState,
+      tree: folder('Dev', '', [], [project('Tpl', 'Tpl', { is_template: true }), project('Alpha', 'Alpha')]),
+      git: { 'C:\\Dev\\Alpha': { branch: 'feature/x', running: null, error: null, staged: 0, unstaged: 0, untracked: 0, ahead: 0, conflicts: 0 } as never },
+    }
+    await mountTool()
+    const card = (name: string) => [...host.querySelectorAll('[data-project]')].find((e) => e.textContent?.includes(name))
+    expect(card('Alpha')?.textContent).toContain('feature/x')
+    expect(card('Alpha')?.textContent).not.toContain('Template')
+    expect(card('Tpl')?.textContent).toContain('Template')
+  })
+
+  it('un projet en erreur git affiche le badge d’erreur avec le message', async () => {
+    current = {
+      ...baseState,
+      git: { 'C:\\Dev\\Alpha': { branch: null, running: null, error: { code: 'git_failed', message: 'boom' }, staged: 0, unstaged: 0, untracked: 0, ahead: 0, conflicts: 0 } as never },
+    }
+    await mountTool()
+    const badge = host.querySelector('.badge.error')
+    expect(badge?.textContent).toContain('read error')
+    expect(badge?.getAttribute('title')).toContain('boom')
+    expect(host.querySelector('.badge.clean')).toBeNull()
+  })
+})
+
+describe('ProjectsTool, sondage', () => {
+  const getStates = () => calls.filter((c) => c.action === 'get_state').length
+  const mountFake = async (): Promise<void> => {
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    app = createApp(ProjectsTool).use(i18n)
+    app.mount(host)
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('ne tourne pas quand rien n’est en cours', async () => {
+    await mountFake()
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(getStates()).toBe(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('tourne pendant le parcours et s’arrête au démontage', async () => {
+    current = { ...baseState, scanning: true, tree: null }
+    await mountFake()
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(getStates()).toBe(3)
+    app?.unmount()
+    app = null
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(getStates()).toBe(3)
   })
 })

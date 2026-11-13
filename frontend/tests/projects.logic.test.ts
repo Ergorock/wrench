@@ -78,6 +78,13 @@ describe('projects logic', () => {
     ])
   })
 
+  it('gitBadges : erreur sans badge propre ; push en cours garde les badges connus', () => {
+    const err = { code: 'git_failed', message: 'boom' }
+    expect(gitBadges(git({ error: err }))).toEqual([{ kind: 'error' }])
+    expect(gitBadges(git({ running: 'push', unstaged: 2 }))).toEqual([{ kind: 'changes', n: 2 }])
+    expect(gitBadges(git({ running: 'commit' }))).toEqual([{ kind: 'clean' }])
+  })
+
   it('fr.json et en.json ont les mêmes clés', () => {
     const keys = (o: object, p = ''): string[] =>
       Object.entries(o).flatMap(([k, v]) => (typeof v === 'object' ? keys(v, `${p}${k}.`) : [`${p}${k}`]))

@@ -10,6 +10,9 @@
   "folder": {
     "count": "{n} projet | {n} projets"
   },
+  "card": {
+    "template": "Modèle"
+  },
   "badges": {
     "changes": "● {n}",
     "changesTitle": "{n} fichier(s) modifié(s) ou non suivi(s)",
@@ -17,6 +20,7 @@
     "aheadTitle": "{n} commit(s) à pousser",
     "conflict": "⚠ conflit",
     "conflictTitle": "Des fichiers sont en conflit",
+    "error": "⚠ erreur de lecture",
     "clean": "✓ propre",
     "cleanTitle": "Rien à valider ni à pousser"
   },

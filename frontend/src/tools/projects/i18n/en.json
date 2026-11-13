@@ -10,6 +10,9 @@
   "folder": {
     "count": "{n} project | {n} projects"
   },
+  "card": {
+    "template": "Template"
+  },
   "badges": {
     "changes": "● {n}",
     "changesTitle": "{n} modified or untracked file(s)",
@@ -17,6 +20,7 @@
     "aheadTitle": "{n} commit(s) to push",
     "conflict": "⚠ conflict",
     "conflictTitle": "Some files are in conflict",
+    "error": "⚠ read error",
     "clean": "✓ clean",
     "cleanTitle": "Nothing to commit or push"
   },
