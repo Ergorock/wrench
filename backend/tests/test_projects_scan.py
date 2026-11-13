@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from wrench.tools.projects.scan import flatten, is_project, scan, techs_of
+from wrench.tools.projects.scan import find_project_exe, flatten, is_project, scan, techs_of
 
 
 def test_markers(tmp_path: Path) -> None:
@@ -102,3 +102,50 @@ def test_sorted_casefold_and_no_markers(tmp_path: Path) -> None:
     assert [p.name for p in tree.projects] == ["a", "B", "C"]
     assert [f.name for f in tree.folders] == ["y", "Z"]
     assert techs_of(tmp_path / "a") == []
+
+
+def _touch(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch()
+    return path
+
+
+def test_exe_name_match_wins_over_sorted_order(tmp_path: Path) -> None:
+    proj = tmp_path / "Bar"
+    _touch(proj / "Foo.exe")
+    _touch(proj / "dist" / "Other.exe")
+    wanted = _touch(proj / "dist" / "Bar" / "Bar.exe")
+    assert find_project_exe(proj) == str(wanted)
+
+
+def test_exe_only_under_dist(tmp_path: Path) -> None:
+    proj = tmp_path / "Proj"
+    wanted = _touch(proj / "dist" / "Wrench" / "Wrench.exe")
+    assert find_project_exe(proj) == str(wanted)
+
+
+def test_exe_too_deep_is_ignored(tmp_path: Path) -> None:
+    proj = tmp_path / "Proj"
+    _touch(proj / "dist" / "a" / "b" / "c" / "d" / "Deep.exe")
+    assert find_project_exe(proj) is None
+
+
+def test_exe_at_max_depth_is_found(tmp_path: Path) -> None:
+    proj = tmp_path / "Proj"
+    wanted = _touch(proj / "build" / "a" / "b" / "c" / "Ok.exe")
+    assert find_project_exe(proj) == str(wanted)
+
+
+def test_no_exe(tmp_path: Path) -> None:
+    proj = tmp_path / "Proj"
+    _touch(proj / "README.md")
+    assert find_project_exe(proj) is None
+
+
+def test_scan_fills_exe_for_projects_only(tmp_path: Path) -> None:
+    proj = tmp_path / "Proj"
+    _touch(proj / "README.md")
+    exe = _touch(proj / "Proj.exe")
+    tree = scan(tmp_path, 4, None)
+    assert tree.projects[0].exe == str(exe)
+    assert not hasattr(tree, "exe")

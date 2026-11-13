@@ -25,6 +25,7 @@ class ProjectEntry(BaseModel):
     rel_path: str  # parts joined with os.sep (`\` on Windows)
     techs: list[str]
     is_template: bool
+    exe: str | None = None
 
 
 class FolderEntry(BaseModel):
@@ -72,6 +73,46 @@ def techs_of(folder: Path) -> list[str]:
     return _techs(_names(folder))
 
 
+_EXE_DIRS = ("dist", "build")
+_EXE_DEPTH = 3
+
+
+def _exes_under(folder: Path, depth: int) -> list[Path]:
+    """`.exe` files in `folder` and in its sub-folders down to `depth` levels (no links)."""
+    found: list[Path] = []
+    try:
+        with os.scandir(folder) as it:
+            for e in it:
+                if _is_link(e):
+                    continue
+                if e.is_dir():
+                    if depth > 0:
+                        found.extend(_exes_under(Path(e.path), depth - 1))
+                elif e.name.casefold().endswith(".exe") and e.is_file():
+                    found.append(Path(e.path))
+    except OSError:
+        pass
+    return found
+
+
+def find_project_exe(folder: Path) -> str | None:
+    """The project's own executable: `.exe` files in the folder, or under `dist`/`build`.
+    The one named like the folder wins; otherwise the first in sorted order."""
+    candidates = _exes_under_flat(folder)
+    for sub in _EXE_DIRS:
+        candidates.extend(_exes_under(folder / sub, _EXE_DEPTH))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda p: str(p).casefold())
+    wanted = folder.name.casefold()
+    best = next((p for p in candidates if p.stem.casefold() == wanted), candidates[0])
+    return os.path.abspath(best)
+
+
+def _exes_under_flat(folder: Path) -> list[Path]:
+    return _exes_under(folder, -1)
+
+
 def _key(path: Path) -> str:
     return os.path.normcase(str(path.resolve()))
 
@@ -114,6 +155,7 @@ def scan(root: Path, max_depth: int, templates_dir: Path | None) -> FolderEntry:
                             rel_path=child_rel,
                             techs=_techs(names),
                             is_template=is_template(child),
+                            exe=find_project_exe(child),
                         )
                     )
                 else:
