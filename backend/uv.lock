@@ -838,12 +838,30 @@ wheels = [
 ]
 
 [[package]]
+name = "send2trash"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/9c/41c11853a5fb67b4639993a628182d326ffe4327eb28a125d202fb49950f/send2trash-2.2.0.tar.gz", hash = "sha256:e0ac412073f7984288908d9d8b8d13c82be69a615bb513d948fa2f053447970a", size = 19703, upload-time = "2026-11-12T00:35:19.813Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/de/7a9e77bd4c5f6eb11d90eb75807c1e1f0ea54997b05ae86d6fc5fa080c04/send2trash-2.2.0-py3-none-any.whl", hash = "sha256:7f540296d59744fbf2f88b0d6f3a484af78c94d3c20e0875a4d5eed61aef037c", size = 17436, upload-time = "2026-11-12T00:35:18.674Z" },
+]
+
+[[package]]
 name = "setuptools"
 version = "84.2.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/70/b3/c19426f783614d625699a4b247faf628ea9ab1db228674491767b417f9e1/setuptools-84.2.1.tar.gz", hash = "sha256:3ff8b3b5492a0aa66960f4419365a86b84e013070d4313e4d4a6894f5d64d6bc", size = 1230289, upload-time = "2026-10-20T19:01:37.742Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl", hash = "sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2", size = 876263, upload-time = "2026-10-20T19:01:35.678Z" },
+]
+
+[[package]]
+name = "types-send2trash"
+version = "2.1.0.20260408"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/6f/b9d32edd71063a3eb516aeb5090a42119ddaa6c8371c5ed20e24b2cc8894/types_send2trash-2.1.0.20260408.tar.gz", hash = "sha256:caeea92ff46e6a5a5333f2558a773d8962c04d9b7a8fc5b4cb3d34f2962aba08", size = 7673, upload-time = "2026-04-08T04:32:33.673Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/6e/a5b49858cd85a4f207255b7f3482ea6e061c289b230e2e2401c0e558651e/types_send2trash-2.1.0.20260408-py3-none-any.whl", hash = "sha256:b118d896ec324436a554c2ae1b1dfda9487fd1a51b9049e209c2d42b9644ad61", size = 8277, upload-time = "2026-04-08T04:32:32.943Z" },
 ]
 
 [[package]]
@@ -874,6 +892,7 @@ source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
     { name = "pywebview" },
+    { name = "send2trash" },
 ]
 
 [package.dev-dependencies]
@@ -883,12 +902,14 @@ dev = [
     { name = "pyinstaller" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "types-send2trash" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pywebview", specifier = ">=5.3" },
+    { name = "send2trash", specifier = ">=2.2.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -898,4 +919,5 @@ dev = [
     { name = "pyinstaller", specifier = ">=6.11" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
+    { name = "types-send2trash", specifier = ">=2.1.0.20260408" },
 ]

@@ -1,0 +1,30 @@
+{
+  "name": "Nettoyeur de téléchargements",
+  "description": "Repérer les anciens fichiers, les gros fichiers ou certains types, et les envoyer à la Corbeille après vérification.",
+  "noFolder": "Aucun dossier choisi",
+  "chooseFolder": "Choisir le dossier…",
+  "extensions": "Extensions (séparées par des virgules, vide = toutes)",
+  "extensionsPlaceholder": "ex. exe, zip, msi",
+  "minAge": "Âge minimal (jours)",
+  "minSize": "Taille minimale (Mo)",
+  "scan": "Analyser",
+  "found": "{count} fichier(s) trouvé(s), {size} au total. Vérifiez la liste avant d’envoyer.",
+  "noFiles": "Aucun fichier ne correspond à ces critères.",
+  "selectAll": "Tout sélectionner",
+  "selectNone": "Tout désélectionner",
+  "selectedCount": "{count} fichier(s) sélectionné(s), {size}",
+  "sendToTrash": "Envoyer à la Corbeille",
+  "confirmText": "Envoyer {count} fichier(s), {size}, à la Corbeille ?",
+  "confirm": "Confirmer",
+  "cancel": "Annuler",
+  "removedCount": "{count} fichier(s) envoyé(s) à la Corbeille.",
+  "inBin": "Ils peuvent être restaurés depuis la Corbeille.",
+  "reasons": {
+    "not_in_selection": "ne correspond plus aux critères, il n’a pas été touché",
+    "delete_failed": "impossible à supprimer (fichier ouvert ou protégé ?)"
+  },
+  "errors": {
+    "folder_not_found": "Ce dossier n’existe pas.",
+    "root_folder": "La racine d’un disque ne peut pas être nettoyée."
+  }
+}
