@@ -23,7 +23,7 @@ const badges = computed(() => gitBadges(props.git))
 const badgeText = (kind: string, n?: number): string => t(`${PREFIX}badges.${kind}`, { n })
 const badgeTitle = (kind: string, n?: number): string =>
   kind === 'error' ? (props.git?.error?.message ?? '') : t(`${PREFIX}badges.${kind}Title`, { n })
-const nameIcon = computed(() => (props.editors.length > 0 ? appIcon(props.editors[0].exe).value : null))
+const nameIcon = computed(() => (props.project.exe ? appIcon(props.project.exe).value : null))
 const editorTitle = (e: EditorView): string =>
   t(`${PREFIX}editor.${e.available ? 'open' : 'missing'}`, { name: e.name })
 </script>

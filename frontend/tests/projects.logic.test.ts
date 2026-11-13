@@ -23,6 +23,7 @@ const project = (name: string, rel: string, o: Partial<ProjectEntry> = {}): Proj
   rel_path: rel,
   techs: [],
   is_template: false,
+  exe: null,
   ...o,
 })
 const folder = (name: string, rel: string, folders: FolderEntry[], projects: ProjectEntry[]): FolderEntry => ({

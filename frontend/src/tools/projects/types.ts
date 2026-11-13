@@ -7,6 +7,7 @@ export interface ProjectEntry {
   rel_path: string
   techs: string[]
   is_template: boolean
+  exe: string | null
 }
 
 export interface FolderEntry {

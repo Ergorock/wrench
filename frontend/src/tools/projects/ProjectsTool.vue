@@ -32,7 +32,7 @@ const selectedProject = computed<{ project: ProjectEntry; missing: boolean } | n
   const found = findProject(tree.value, selected.value)
   if (found) return { project: found, missing: false }
   const name = selected.value.split('\\').pop() ?? selected.value
-  return { project: { name, path: selected.value, rel_path: '', techs: [], is_template: false }, missing: true }
+  return { project: { name, path: selected.value, rel_path: '', techs: [], is_template: false, exe: null }, missing: true }
 })
 const configuring = ref(false)
 const newProject = ref(false)

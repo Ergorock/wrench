@@ -12,6 +12,7 @@ const project = (name: string, rel: string, o: Partial<ProjectEntry> = {}): Proj
   rel_path: rel,
   techs: ['Node'],
   is_template: false,
+  exe: null,
   ...o,
 })
 const folder = (name: string, rel: string, folders: FolderEntry[], projects: ProjectEntry[]): FolderEntry => ({
@@ -728,33 +729,33 @@ describe('ProjectsTool, nouveau projet', () => {
   })
 })
 
-describe('ProjectCard, icône de l’application', () => {
+describe('ProjectCard, icône de l’exe du projet', () => {
   const editor = (id: string, exe: string) => ({ id, name: id, exe, available: true })
-  const mountCard = async (editors: ReturnType<typeof editor>[], icon: (exe: string) => string | null): Promise<void> => {
+  const mountCard = async (exe: string | null, editors: ReturnType<typeof editor>[], icon: (exe: string) => string | null): Promise<void> => {
     ;(window as unknown as { pywebview: unknown }).pywebview = {
-      api: { get_app_icon: async (exe: string) => ({ ok: true, data: icon(exe) }) },
+      api: { get_app_icon: async (e: string) => ({ ok: true, data: icon(e) }) },
     }
     host = document.createElement('div')
     document.body.appendChild(host)
-    app = createApp(ProjectCard, { project: project('Alpha', 'Alpha'), git: undefined, editors, selected: false, showPath: false }).use(i18n)
+    app = createApp(ProjectCard, { project: project('Alpha', 'Alpha', { exe }), git: undefined, editors, selected: false, showPath: false }).use(i18n)
     app.mount(host)
     await settle()
   }
   const nameIcon = () => host.querySelector('.name img') as HTMLImageElement | null
 
-  it('affiche l’icône du premier éditeur devant le nom', async () => {
-    await mountCard([editor('claude', 'icon-claude.exe'), editor('kiro', 'icon-kiro.exe')], (exe) => `data:image/png;base64,${exe}`)
-    expect(nameIcon()?.getAttribute('src')).toBe('data:image/png;base64,icon-claude.exe')
+  it('affiche l’icône de l’exe du projet devant le nom', async () => {
+    await mountCard('C:\p\icon-proj.exe', [editor('claude', 'icon-claude.exe')], (e) => `data:image/png;base64,${e}`)
+    expect(nameIcon()?.getAttribute('src')).toBe('data:image/png;base64,C:\p\icon-proj.exe')
     expect(nameIcon()?.getAttribute('alt')).toBe('')
   })
 
-  it('sans éditeur, aucune icône', async () => {
-    await mountCard([], (exe) => `data:image/png;base64,${exe}`)
+  it('sans exe, aucune icône même avec des éditeurs', async () => {
+    await mountCard(null, [editor('kiro', 'icon-kiro2.exe')], (e) => `data:image/png;base64,${e}`)
     expect(nameIcon()).toBeNull()
   })
 
-  it('icône indisponible, aucune image', async () => {
-    await mountCard([editor('none', 'icon-none.exe')], () => null)
+  it('icône de l’exe indisponible, aucune image', async () => {
+    await mountCard('C:\p\icon-none.exe', [editor('none', 'icon-none-ed.exe')], () => null)
     expect(nameIcon()).toBeNull()
   })
 })
