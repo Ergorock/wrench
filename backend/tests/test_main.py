@@ -23,6 +23,8 @@ def test_only_the_bridge_methods_are_exposed(api: Api) -> None:
         "install_update",
         "open_url",
         "pick_folder",
+        "get_app_icon",
+        "pick_exe",
     ]
     assert all(getattr(f, "__self__", None) is api for f in exposed)
 

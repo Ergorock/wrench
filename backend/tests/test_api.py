@@ -214,9 +214,13 @@ class FakeWindow:
     def __init__(self, result: Any) -> None:
         self.result = result
         self.calls: list[tuple[Any, str]] = []
+        self.file_types: tuple[str, ...] = ()
 
-    def create_file_dialog(self, dialog_type: Any, directory: str = "") -> Any:
+    def create_file_dialog(
+        self, dialog_type: Any, directory: str = "", file_types: tuple[str, ...] = ()
+    ) -> Any:
         self.calls.append((dialog_type, directory))
+        self.file_types = file_types
         return self.result
 
 
@@ -236,6 +240,33 @@ def test_pick_folder_cancel(api: Api) -> None:
 
 def test_pick_folder_without_window(api: Api) -> None:
     assert api.pick_folder()["error"]["code"] == "internal_error"
+
+
+def test_pick_exe_returns_path(api: Api) -> None:
+    w = FakeWindow([r"C:\Apps\a.exe"])
+    api._set_window(w)
+    assert api.pick_exe(r"C:\Apps") == {"ok": True, "data": r"C:\Apps\a.exe"}
+    assert w.calls == [(webview.FileDialog.OPEN, r"C:\Apps")]
+    assert w.file_types == ("Programmes (*.exe)", "Tous les fichiers (*.*)")
+
+
+def test_pick_exe_cancel_and_without_window(api: Api) -> None:
+    assert api.pick_exe()["error"]["code"] == "internal_error"
+    api._set_window(FakeWindow(None))
+    assert api.pick_exe() == {"ok": True, "data": None}
+
+
+def test_get_app_icon_data_url_and_cache(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr("wrench.api.icon_png", lambda t: calls.append(t) or b"PNG")
+    assert api.get_app_icon("x.exe") == {"ok": True, "data": "data:image/png;base64,UE5H"}
+    api.get_app_icon("x.exe")
+    assert calls == ["x.exe"]
+
+
+def test_get_app_icon_none(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("wrench.api.icon_png", lambda t: None)
+    assert api.get_app_icon("x.exe") == {"ok": True, "data": None}
 
 
 def test_save_settings_rejects_editor_without_name(api: Api) -> None:

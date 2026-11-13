@@ -65,6 +65,8 @@ def _exposed(api: Api) -> list[Callable[..., Any]]:
         api.install_update,
         api.open_url,
         api.pick_folder,
+        api.get_app_icon,
+        api.pick_exe,
     ]
 
 

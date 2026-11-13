@@ -1,3 +1,4 @@
+import base64
 import logging
 import threading
 import webbrowser
@@ -15,6 +16,7 @@ from wrench.core.registry import ToolRegistry
 from wrench.core.settings import Settings, SettingsStore, WindowSettings
 from wrench.core.updater import UpdateError, Updater
 from wrench.sdk import ToolError
+from wrench.shared.winicon import icon_png
 
 logger = logging.getLogger("wrench.api")
 
@@ -50,6 +52,7 @@ class Api:
         self._updater = updater
         self._lock = threading.Lock()
         self._window: Any = None
+        self._icons: dict[str, str | None] = {}
 
     def _current(self) -> Settings:
         with self._lock:
@@ -197,6 +200,38 @@ class Api:
                 raise RuntimeError("No window to attach the folder dialog to")
             result = self._window.create_file_dialog(
                 webview.FileDialog.FOLDER, directory=initial or ""
+            )
+            if not result:
+                return None
+            return str(result if isinstance(result, str) else result[0])
+
+        return self._envelope(run)
+
+    def get_app_icon(self, exe: str) -> dict[str, Any]:
+        """PNG data URL of an application's icon, or None; cached per process."""
+
+        def run() -> str | None:
+            if exe not in self._icons:
+                png = icon_png(exe)
+                self._icons[exe] = (
+                    None
+                    if png is None
+                    else "data:image/png;base64," + base64.b64encode(png).decode()
+                )
+            return self._icons[exe]
+
+        return self._envelope(run)
+
+    def pick_exe(self, initial: str | None = None) -> dict[str, Any]:
+        """Native file picker for an executable; `data` is the path, or None when cancelled."""
+
+        def run() -> str | None:
+            if self._window is None:
+                raise RuntimeError("No window to attach the file dialog to")
+            result = self._window.create_file_dialog(
+                webview.FileDialog.OPEN,
+                directory=initial or "",
+                file_types=("Programmes (*.exe)", "Tous les fichiers (*.*)"),
             )
             if not result:
                 return None
