@@ -23,13 +23,16 @@ const badges = computed(() => gitBadges(props.git))
 const badgeText = (kind: string, n?: number): string => t(`${PREFIX}badges.${kind}`, { n })
 const badgeTitle = (kind: string, n?: number): string =>
   kind === 'error' ? (props.git?.error?.message ?? '') : t(`${PREFIX}badges.${kind}Title`, { n })
+const nameIcon = computed(() => (props.editors.length > 0 ? appIcon(props.editors[0].exe).value : null))
 const editorTitle = (e: EditorView): string =>
   t(`${PREFIX}editor.${e.available ? 'open' : 'missing'}`, { name: e.name })
 </script>
 
 <template>
   <div class="project-card" :class="{ selected }" :data-project="project.path" @click="emit('select')">
-    <div class="name">{{ project.name }}</div>
+    <div class="name">
+      <img v-if="nameIcon" class="name-icon" :src="nameIcon" alt="" />{{ project.name }}
+    </div>
     <div v-if="git?.branch" class="branch">{{ git.branch }}</div>
     <div v-if="showPath" class="path">{{ project.rel_path }}</div>
     <div v-if="project.techs.length > 0 || project.is_template" class="techs">
@@ -85,6 +88,12 @@ const editorTitle = (e: EditorView): string =>
 .name {
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+.name-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: text-bottom;
 }
 .branch,
 .path {

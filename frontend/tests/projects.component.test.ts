@@ -3,6 +3,7 @@ import { createApp, nextTick, type App } from 'vue'
 import { i18n, setLanguage } from '../src/i18n'
 import { toasts } from '../src/shell/toasts'
 import ProjectsTool from '../src/tools/projects/ProjectsTool.vue'
+import ProjectCard from '../src/tools/projects/ProjectCard.vue'
 import type { Config, FolderEntry, ProjectEntry, Requirement, RequirementsView, State } from '../src/tools/projects/types'
 
 const project = (name: string, rel: string, o: Partial<ProjectEntry> = {}): ProjectEntry => ({
@@ -724,5 +725,36 @@ describe('ProjectsTool, nouveau projet', () => {
     await settle()
     expect(dialog()).not.toBeNull()
     expect(toasts.value).toHaveLength(1)
+  })
+})
+
+describe('ProjectCard, icône de l’application', () => {
+  const editor = (id: string, exe: string) => ({ id, name: id, exe, available: true })
+  const mountCard = async (editors: ReturnType<typeof editor>[], icon: (exe: string) => string | null): Promise<void> => {
+    ;(window as unknown as { pywebview: unknown }).pywebview = {
+      api: { get_app_icon: async (exe: string) => ({ ok: true, data: icon(exe) }) },
+    }
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    app = createApp(ProjectCard, { project: project('Alpha', 'Alpha'), git: undefined, editors, selected: false, showPath: false }).use(i18n)
+    app.mount(host)
+    await settle()
+  }
+  const nameIcon = () => host.querySelector('.name img') as HTMLImageElement | null
+
+  it('affiche l’icône du premier éditeur devant le nom', async () => {
+    await mountCard([editor('claude', 'icon-claude.exe'), editor('kiro', 'icon-kiro.exe')], (exe) => `data:image/png;base64,${exe}`)
+    expect(nameIcon()?.getAttribute('src')).toBe('data:image/png;base64,icon-claude.exe')
+    expect(nameIcon()?.getAttribute('alt')).toBe('')
+  })
+
+  it('sans éditeur, aucune icône', async () => {
+    await mountCard([], (exe) => `data:image/png;base64,${exe}`)
+    expect(nameIcon()).toBeNull()
+  })
+
+  it('icône indisponible, aucune image', async () => {
+    await mountCard([editor('none', 'icon-none.exe')], () => null)
+    expect(nameIcon()).toBeNull()
   })
 })
