@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import stat
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -236,3 +237,38 @@ def test_git_missing(ctx: ToolContext, tmp_path: Path) -> None:
     with pytest.raises(ToolError) as e:
         svc.invoke("push", {"path": str(a)})
     assert e.value.code == "git_not_found"
+
+
+def test_non_git_project_inside_a_repo_is_refused(ctx: ToolContext, tmp_path: Path) -> None:
+    # The root is a git repository; its sub-folder is a project (README) with no `.git`.
+    parent = make_git_project(tmp_path, "parent")
+    git(parent, "remote", "add", "origin", "https://example.org/p/parent.git")
+    child = parent / "sub"
+    child.mkdir()
+    (child / "README.md").touch()
+    svc = configured(ctx, parent)
+    assert [p["path"] for p in settled(svc)["tree"]["projects"]] == [str(child)]
+    for action, payload in [
+        ("commit", {"path": str(child), "message": "m"}),
+        ("push", {"path": str(child)}),
+        ("set_remote", {"path": str(child), "url": "https://example.org/x/y.git"}),
+    ]:
+        with pytest.raises(ToolError) as e:
+            svc.invoke(action, payload)
+        assert e.value.code == "not_a_repo", action
+    assert git(parent, "remote", "get-url", "origin") == "https://example.org/p/parent.git"
+
+
+def test_push_busy(ctx: ToolContext, tmp_path: Path) -> None:
+    root = tmp_path / "dev"
+    a = make_git_project(root, "a")
+    svc = configured(ctx, root)
+    release = threading.Event()
+    key = os.path.normcase(str(a.resolve()))
+    assert svc._jobs.submit(key, "fetch", lambda: release.wait(10))
+    try:
+        with pytest.raises(ToolError) as e:
+            svc.invoke("push", {"path": str(a)})
+        assert e.value.code == "busy"
+    finally:
+        release.set()

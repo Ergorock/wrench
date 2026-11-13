@@ -214,23 +214,33 @@ class ProjectsService(ToolService):
                 repo = self._repos[key] = _Repo(Path(entry.path), entry)
             return repo
 
+    def _git_repo(self, path: str) -> _Repo:
+        """Like _project, and refuses a project without its own `.git`: git would act on
+        the repository that contains it."""
+        entry = self._project(path)
+        with self._lock:
+            is_git = _key(entry.path) in self._git_projects
+        if not is_git:
+            raise ToolError("not_a_repo", f"Not a git repository: {path}")
+        return self._repo(entry)
+
     def _state(self) -> State:
         root = self._config()[0] or ""
         with self._lock:
-            repos = list(self._repos.items())
+            repos = [(k, r.path, r.entry, r.status, r.error) for k, r in self._repos.items()]
             scanning, scan_error, tree = self._scanning, self._scan_error, self._tree
         views: dict[str, GitView] = {}
-        for key, repo in repos:
+        for key, path, entry, repo_status, repo_error in repos:
             job = self._jobs.state(key)
-            status = repo.status or _blank_status(repo.path)
-            views[repo.entry.path] = GitView(
+            status = repo_status or _blank_status(path)
+            views[entry.path] = GitView(
                 **status.model_dump(),
                 root=root,
-                name=repo.entry.name,
-                rel_path=repo.entry.rel_path,
+                name=entry.name,
+                rel_path=entry.rel_path,
                 web_url=web_url(status.remote_url),
                 running=job.running,
-                error=job.error or repo.error,
+                error=job.error or repo_error,
             )
         return State(
             scanning=scanning,
@@ -317,7 +327,7 @@ class ProjectsService(ToolService):
     @action
     def commit(self, path: str, message: str, push: bool = False) -> State:
         self._require_git()
-        repo = self._repo(self._project(path))
+        repo = self._git_repo(path)
         if not message.strip():
             raise ToolError("empty_message", "The commit message is empty")
 
@@ -334,15 +344,16 @@ class ProjectsService(ToolService):
     @action
     def push(self, path: str) -> State:
         self._require_git()
-        repo = self._repo(self._project(path))
-        self._submit(repo, "push", lambda: ops.push(repo.path))
+        repo = self._git_repo(path)
+        if not self._submit(repo, "push", lambda: ops.push(repo.path)):
+            raise ToolError("busy", "An operation is already running on this repository")
         return self._state()
 
     @action
     def set_remote(self, path: str, url: str) -> State:
         """Synchronous: a local read and a local write."""
         self._require_git()
-        repo = self._repo(self._project(path))
+        repo = self._git_repo(path)
         try:
             ops.add_origin(repo.path, url.strip())
         except GitOpError as exc:
