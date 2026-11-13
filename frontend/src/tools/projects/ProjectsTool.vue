@@ -9,7 +9,8 @@ import ConfigDialog from './ConfigDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import FolderCard from './FolderCard.vue'
 import ProjectCard from './ProjectCard.vue'
-import { breadcrumb, byName, findFolder, needsTemplateConfirm, searchProjects } from './logic'
+import ProjectPanel from './ProjectPanel.vue'
+import { breadcrumb, byName, findFolder, findProject, needsTemplateConfirm, searchProjects } from './logic'
 import type { Config, EditorView, ProjectEntry, State } from './types'
 
 const PREFIX = 'tools.projects.'
@@ -24,6 +25,14 @@ const editors = ref<EditorView[]>([])
 const relPath = ref('')
 const query = ref('')
 const selected = ref<string | null>(null)
+// A selected project that vanished after a rescan stays selected, shown as missing.
+const selectedProject = computed<{ project: ProjectEntry; missing: boolean } | null>(() => {
+  if (selected.value === null || !tree.value) return null
+  const found = findProject(tree.value, selected.value)
+  if (found) return { project: found, missing: false }
+  const name = selected.value.split('\\').pop() ?? selected.value
+  return { project: { name, path: selected.value, rel_path: '', techs: [], is_template: false }, missing: true }
+})
 const configuring = ref(false)
 const pendingOpen = ref<{ path: string; editorId: string } | null>(null)
 let pollFailed = false
@@ -221,8 +230,17 @@ onUnmounted(() => {
               />
             </div>
           </div>
-          <!-- Detail panel of the selected project: filled by the next task. -->
-          <aside class="panel" data-slot="detail" />
+          <ProjectPanel
+            v-if="selectedProject"
+            :key="selectedProject.project.path"
+            data-slot="detail"
+            :project="selectedProject.project"
+            :git="selectedProject.missing ? undefined : state?.git[selectedProject.project.path]"
+            :editors="editors"
+            :missing="selectedProject.missing"
+            @close="selected = null"
+            @act="act"
+          />
         </div>
       </template>
     </template>
@@ -309,13 +327,6 @@ button.primary {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
-}
-.panel {
-  flex: 0 0 320px;
-  min-height: 200px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
 }
 .empty {
   color: var(--text-muted);

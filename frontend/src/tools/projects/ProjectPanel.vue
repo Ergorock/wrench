@@ -1,0 +1,276 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { X } from '@lucide/vue'
+import type { RepoView } from '../git_repos/types'
+import CommitDialog from '../git_repos/CommitDialog.vue'
+import { useTool } from '../../bridge/useTool'
+import ConfirmDialog from './ConfirmDialog.vue'
+import RemoteDialog from './RemoteDialog.vue'
+import { buildDraftChanged, gitBadges, needsTemplateConfirm } from './logic'
+import type { BuildInfo, EditorView, GitView, ProjectEntry } from './types'
+
+const PREFIX = 'tools.projects.'
+
+const props = defineProps<{
+  project: ProjectEntry
+  git: GitView | undefined
+  editors: EditorView[]
+  /** The project vanished from the disk after a rescan: only the error line is shown. */
+  missing: boolean
+}>()
+// `act` carries the actions that answer with the whole state; ProjectsTool applies it.
+const emit = defineEmits<{ close: []; act: [action: string, payload: object] }>()
+
+const { t } = useI18n()
+const tool = useTool('projects')
+
+const pending = ref<(() => Promise<void>) | null>(null)
+const committing = ref(false)
+const linking = ref(false)
+const build = ref<BuildInfo>({ command: null, suggested: null })
+const draft = ref('')
+
+const badges = computed(() => gitBadges(props.git))
+const editorTitle = (e: EditorView): string => t(`${PREFIX}editor.${e.available ? 'open' : 'missing'}`, { name: e.name })
+
+async function call(action: string, payload: object = {}): Promise<void> {
+  try {
+    await tool.call(action, { path: props.project.path, ...payload })
+  } catch {
+    // useTool has already shown the error toast.
+  }
+}
+
+// Everything that opens something goes through the template confirmation.
+function guarded(run: () => Promise<void>): void {
+  if (needsTemplateConfirm(props.project)) pending.value = run
+  else void run()
+}
+async function confirm(): Promise<void> {
+  const run = pending.value
+  pending.value = null
+  if (run) await run()
+}
+
+async function loadBuild(): Promise<void> {
+  try {
+    build.value = await tool.call<BuildInfo>('get_build', { path: props.project.path })
+    draft.value = build.value.command ?? ''
+  } catch {
+    // useTool has already shown the error toast.
+  }
+}
+
+async function saveBuild(): Promise<void> {
+  if (!buildDraftChanged(build.value, draft.value)) return
+  try {
+    build.value = await tool.call<BuildInfo>('set_build', { path: props.project.path, command: draft.value })
+    draft.value = build.value.command ?? ''
+  } catch {
+    // useTool has already shown the error toast.
+  }
+}
+
+function commit(message: string, push: boolean): void {
+  committing.value = false
+  emit('act', 'commit', { path: props.project.path, message, push })
+}
+function link(url: string): void {
+  linking.value = false
+  emit('act', 'set_remote', { path: props.project.path, url })
+}
+
+// Escape closes the panel, except when a dialog is open: it closes first.
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key === 'Escape' && !document.querySelector('[role="dialog"]')) emit('close')
+}
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+  if (!props.missing) void loadBuild()
+})
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+</script>
+
+<template>
+  <aside class="panel">
+    <header>
+      <div class="title">
+        <h2>{{ project.name }}</h2>
+        <div class="path">{{ project.path }}</div>
+      </div>
+      <button type="button" class="icon" :aria-label="t(`${PREFIX}panel.close`)" @click="emit('close')">
+        <X :size="16" aria-hidden="true" />
+      </button>
+    </header>
+
+    <p v-if="missing" class="error">{{ t(`${PREFIX}panel.gone`) }}</p>
+    <template v-else>
+      <section>
+        <h3>{{ t(`${PREFIX}panel.open`) }}</h3>
+        <div class="row">
+          <button
+            v-for="e in editors"
+            :key="e.id"
+            type="button"
+            :title="editorTitle(e)"
+            :disabled="!e.available"
+            @click="guarded(() => call('open_in', { editor_id: e.id }))"
+          >{{ e.name }}</button>
+          <button type="button" @click="guarded(() => call('open_explorer'))">{{ t(`${PREFIX}panel.explorer`) }}</button>
+          <button type="button" @click="guarded(() => call('open_terminal'))">{{ t(`${PREFIX}panel.terminal`) }}</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>{{ t(`${PREFIX}panel.git`) }}</h3>
+        <p v-if="!git" class="muted">{{ t(`${PREFIX}panel.noRepo`) }}</p>
+        <template v-else>
+          <p class="muted">
+            {{ git.branch ?? t(`${PREFIX}panel.detached`) }}
+            <span v-for="b in badges" :key="b.kind" class="badge" :class="b.kind">{{ t(`${PREFIX}badges.${b.kind}`, { n: b.n }) }}</span>
+          </p>
+          <p v-if="git.error" class="error">
+            {{ git.error.message }}
+            <button type="button" class="link" @click="emit('act', 'clear_error', { path: project.path })">
+              {{ t(`${PREFIX}panel.dismissError`) }}
+            </button>
+          </p>
+          <div class="row">
+            <button type="button" :disabled="git.running !== null" @click="committing = true">{{ t(`${PREFIX}panel.commit`) }}</button>
+            <button
+              type="button"
+              :disabled="git.running !== null || git.remote_url === null"
+              @click="emit('act', 'push', { path: project.path })"
+            >{{ t(`${PREFIX}panel.push`) }}</button>
+            <button v-if="git.remote_url !== null" type="button" @click="call('open_repo_page')">
+              {{ t(`${PREFIX}panel.openRepo`) }}
+            </button>
+            <button v-else type="button" @click="linking = true">{{ t(`${PREFIX}panel.linkRepo`) }}</button>
+          </div>
+        </template>
+      </section>
+
+      <section>
+        <h3>{{ t(`${PREFIX}panel.build`) }}</h3>
+        <div class="row">
+          <input
+            v-model="draft"
+            class="build"
+            type="text"
+            :placeholder="build.suggested ?? ''"
+            :aria-label="t(`${PREFIX}panel.buildLabel`)"
+            @blur="saveBuild"
+            @keydown.enter="saveBuild"
+          />
+          <button type="button" @click="guarded(() => call('run_build'))">{{ t(`${PREFIX}panel.run`) }}</button>
+        </div>
+      </section>
+    </template>
+
+    <ConfirmDialog v-if="pending" :message="t(`${PREFIX}confirm.template`)" @confirm="confirm" @cancel="pending = null" />
+    <CommitDialog
+      v-if="committing && git"
+      :repo="{ ...git, running: null } as RepoView"
+      :can-push="git.remote_url !== null"
+      @close="committing = false"
+      @submit="commit"
+    />
+    <RemoteDialog v-if="linking" @submit="link" @cancel="linking = false" />
+  </aside>
+</template>
+
+<style scoped>
+.panel {
+  flex: 0 0 320px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+h2 {
+  margin: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+section {
+  margin-top: 14px;
+}
+.path,
+.muted {
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+p {
+  margin: 0 0 6px;
+}
+.error {
+  color: var(--danger);
+}
+.badge {
+  margin-left: 6px;
+}
+.badge.conflict,
+.badge.error {
+  color: var(--danger);
+}
+.badge.ahead,
+.badge.changes {
+  color: var(--accent);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+button {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: var(--hover);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.icon {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 4px;
+}
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.build {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+</style>

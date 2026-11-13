@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   breadcrumb,
+  buildDraftChanged,
   findFolder,
+  findProject,
   gitBadges,
   needsTemplateConfirm,
   normalize,
@@ -89,5 +91,23 @@ describe('projects logic', () => {
     const keys = (o: object, p = ''): string[] =>
       Object.entries(o).flatMap(([k, v]) => (typeof v === 'object' ? keys(v, `${p}${k}.`) : [`${p}${k}`]))
     expect(keys(frTool).sort()).toEqual(keys(enTool).sort())
+  })
+})
+
+describe('projects logic, fiche', () => {
+  const tree = folder('Dev', '', [folder('M3', 'M3', [], [project('Deep', 'M3\\Deep')])], [project('Alpha', 'Alpha')])
+
+  it('findProject cherche dans tout l’inventaire, null si le projet a disparu', () => {
+    expect(findProject(tree, 'C:\\Dev\\M3\\Deep')?.name).toBe('Deep')
+    expect(findProject(tree, 'C:\\Dev\\Alpha')?.name).toBe('Alpha')
+    expect(findProject(tree, 'C:\\Dev\\Gone')).toBeNull()
+  })
+
+  it('buildDraftChanged : le champ Build ne s’enregistre que s’il diffère de la commande enregistrée', () => {
+    expect(buildDraftChanged({ command: 'npm run build', suggested: null }, 'npm run build')).toBe(false)
+    expect(buildDraftChanged({ command: 'npm run build', suggested: null }, ' npm run build ')).toBe(false)
+    expect(buildDraftChanged({ command: null, suggested: 'npm run build' }, '')).toBe(false)
+    expect(buildDraftChanged({ command: null, suggested: 'npm run build' }, 'make')).toBe(true)
+    expect(buildDraftChanged({ command: 'make', suggested: null }, '')).toBe(true)
   })
 })

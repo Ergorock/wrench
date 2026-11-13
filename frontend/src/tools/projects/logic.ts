@@ -1,4 +1,4 @@
-import type { FolderEntry, GitView, ProjectEntry } from './types'
+import type { BuildInfo, FolderEntry, GitView, ProjectEntry } from './types'
 
 export type Badge = { kind: 'changes' | 'ahead' | 'conflict' | 'clean' | 'error'; n?: number }
 
@@ -38,6 +38,13 @@ export function searchProjects(tree: FolderEntry, query: string): ProjectEntry[]
   const q = normalize(query.trim())
   return byName(allProjects(tree).filter((p) => normalize(p.name).includes(q)))
 }
+
+/** The project at `path` anywhere in the inventory; null once it has vanished. */
+export const findProject = (tree: FolderEntry, path: string): ProjectEntry | null =>
+  allProjects(tree).find((p) => p.path === path) ?? null
+
+/** True when the build field holds something other than the saved command (saved on blur or Enter). */
+export const buildDraftChanged = (info: BuildInfo, draft: string): boolean => draft.trim() !== (info.command ?? '')
 
 export const needsTemplateConfirm = (p: ProjectEntry): boolean => p.is_template
 

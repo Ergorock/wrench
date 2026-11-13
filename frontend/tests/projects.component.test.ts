@@ -30,6 +30,7 @@ let calls: Call[]
 let config: Config
 let current: State
 let picked: string | null
+let build: { command: string | null; suggested: string | null }
 let app: App | null
 let host: HTMLElement
 
@@ -64,7 +65,9 @@ function installApi(): void {
             ],
           }
         }
-        if (action === 'open_in') return { ok: true, data: null }
+        if (action === 'open_in' || action === 'open_terminal' || action === 'run_build') return { ok: true, data: null }
+        if (action === 'get_build') return { ok: true, data: build }
+        if (action === 'set_build') return { ok: true, data: { command: payload?.command, suggested: build.suggested } }
         return { ok: true, data: current }
       },
     },
@@ -91,6 +94,7 @@ beforeEach(() => {
   config = { ...baseConfig }
   current = { ...baseState }
   picked = 'C:\\Dev'
+  build = { command: null, suggested: 'npm run build' }
   installApi()
   setLanguage('en')
 })
@@ -286,5 +290,143 @@ describe('ProjectsTool, sondage', () => {
     expect(vi.getTimerCount()).toBe(0)
     await vi.advanceTimersByTimeAsync(3000)
     expect(getStates()).toBe(3)
+  })
+})
+
+describe('ProjectsTool, fiche du projet', () => {
+  const A = 'C:\\Dev\\Alpha'
+  const gitView = (o: Record<string, unknown> = {}) =>
+    ({ path: A, name: 'Alpha', branch: 'main', running: null, error: null, staged: 0, unstaged: 0, untracked: 0, ahead: 0, conflicts: 0, remote_url: null, changed_files: [], ...o }) as never
+  const select = async (name = 'Alpha') => {
+    const card = [...host.querySelectorAll('[data-project]')].find((e) => e.textContent?.includes(name)) as HTMLElement
+    card.click()
+    await settle()
+  }
+  const panel = () => host.querySelector('[data-slot="detail"]')
+  const panelButton = (text: string) => [...(panel()?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.includes(text))
+  const escape = async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await settle()
+  }
+
+  it('absente sans sélection ; une carte l’ouvre, ✕ et Échap la ferment', async () => {
+    await mountTool()
+    expect(panel()).toBeNull()
+    await select()
+    expect(panel()?.textContent).toContain(A)
+    ;(panel()?.querySelector('button[aria-label="Close"]') as HTMLButtonElement).click()
+    await settle()
+    expect(panel()).toBeNull()
+    await select()
+    await escape()
+    expect(panel()).toBeNull()
+  })
+
+  it('Ouvrir : éditeur disponible, éditeur grisé, Terminal', async () => {
+    await mountTool()
+    await select()
+    expect((panelButton('Ghost') as HTMLButtonElement).disabled).toBe(true)
+    panelButton('VS Code')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_in')?.payload).toEqual({ path: A, editor_id: 'vscode' })
+    panelButton('Terminal')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_terminal')?.payload).toEqual({ path: A })
+  })
+
+  it('sur un modèle, Terminal demande la confirmation ; Cancel n’appelle rien', async () => {
+    current = { ...baseState, tree: folder('Dev', '', [], [project('Tpl', 'Tpl', { is_template: true })]) }
+    await mountTool()
+    await select('Tpl')
+    panelButton('Terminal')?.click()
+    await settle()
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('template')
+    await escape()
+    expect(panel()).not.toBeNull()
+    expect(calls.some((c) => c.action === 'open_terminal')).toBe(false)
+    button('Cancel')?.click()
+    await settle()
+    expect(calls.some((c) => c.action === 'open_terminal')).toBe(false)
+    panelButton('Terminal')?.click()
+    await settle()
+    button('Confirm')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_terminal')?.payload).toEqual({ path: 'C:\\Dev\\Tpl' })
+  })
+
+  it('Commit… ouvre CommitDialog et l’envoi appelle commit', async () => {
+    current = { ...baseState, git: { [A]: gitView({ remote_url: 'https://github.com/a/b.git', changed_files: ['a.txt'], unstaged: 1 }) } }
+    await mountTool()
+    await select()
+    panelButton('Commit…')?.click()
+    await settle()
+    const area = host.querySelector('textarea') as HTMLTextAreaElement
+    area.value = 'fix'
+    area.dispatchEvent(new Event('input'))
+    await settle()
+    button('Commit and push')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'commit')?.payload).toEqual({ path: A, message: 'fix', push: true })
+  })
+
+  it('Associer un dépôt… seulement sans remote_url ; l’envoi appelle set_remote', async () => {
+    current = { ...baseState, git: { [A]: gitView() } }
+    await mountTool()
+    await select()
+    expect(panelButton('Open the repository')).toBeUndefined()
+    panelButton('Link a repository…')?.click()
+    await settle()
+    const input = host.querySelector('[role="dialog"] input') as HTMLInputElement
+    input.value = 'https://github.com/a/b.git'
+    input.dispatchEvent(new Event('input'))
+    await settle()
+    ;(host.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement).click()
+    await settle()
+    expect(calls.find((c) => c.action === 'set_remote')?.payload).toEqual({ path: A, url: 'https://github.com/a/b.git' })
+  })
+
+  it('avec remote_url : Ouvrir le dépôt appelle open_repo_page', async () => {
+    current = { ...baseState, git: { [A]: gitView({ remote_url: 'https://github.com/a/b.git' }) } }
+    await mountTool()
+    await select()
+    expect(panelButton('Link a repository…')).toBeUndefined()
+    panelButton('Open the repository')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'open_repo_page')?.payload).toEqual({ path: A })
+  })
+
+  it('affiche l’erreur git du projet', async () => {
+    current = { ...baseState, git: { [A]: gitView({ error: { code: 'git_failed', message: 'boom' } }) } }
+    await mountTool()
+    await select()
+    expect(panel()?.textContent).toContain('boom')
+  })
+
+  it('Build : suggestion en placeholder, Entrée appelle set_build, Lancer appelle run_build', async () => {
+    await mountTool()
+    await select()
+    const input = panel()?.querySelector('input.build') as HTMLInputElement
+    expect(input.placeholder).toBe('npm run build')
+    expect(input.value).toBe('')
+    input.value = 'npm run build'
+    input.dispatchEvent(new Event('input'))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await settle()
+    expect(calls.filter((c) => c.action === 'set_build').map((c) => c.payload)).toEqual([{ path: A, command: 'npm run build' }])
+    panelButton('Run')?.click()
+    await settle()
+    expect(calls.find((c) => c.action === 'run_build')?.payload).toEqual({ path: A })
+  })
+
+  it('projet disparu après un rescan : la fiche reste avec une erreur, sans actions ni load_status', async () => {
+    await mountTool()
+    await select()
+    const before = calls.filter((c) => c.action === 'load_status').length
+    current = { ...baseState, tree: folder('Dev', '', [], []) }
+    button('Refresh')?.click()
+    await settle()
+    expect(panel()?.textContent).toContain('no longer exists')
+    expect(panelButton('Terminal')).toBeUndefined()
+    expect(calls.filter((c) => c.action === 'load_status').length).toBe(before)
   })
 })

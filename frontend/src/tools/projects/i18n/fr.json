@@ -53,6 +53,30 @@
     "confirm": "Confirmer",
     "cancel": "Annuler"
   },
+  "panel": {
+    "close": "Fermer",
+    "gone": "Ce projet n’existe plus sur le disque.",
+    "open": "Ouvrir",
+    "explorer": "Explorateur",
+    "terminal": "Terminal",
+    "git": "Git",
+    "noRepo": "Pas un dépôt git, ou pas encore lu.",
+    "detached": "HEAD détachée",
+    "commit": "Commit…",
+    "push": "Pousser",
+    "openRepo": "Ouvrir le dépôt",
+    "linkRepo": "Associer un dépôt…",
+    "dismissError": "Ignorer",
+    "build": "Build",
+    "buildLabel": "Commande de build",
+    "run": "Lancer",
+    "remote": {
+      "title": "Associer un dépôt",
+      "url": "URL du dépôt",
+      "cancel": "Annuler",
+      "save": "Associer"
+    }
+  },
   "errors": {
     "not_a_project": "Ce projet n’existe plus : actualisez la liste.",
     "editor_missing": "Cet éditeur est introuvable sur cet ordinateur.",

@@ -53,6 +53,30 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "panel": {
+    "close": "Close",
+    "gone": "This project no longer exists on disk.",
+    "open": "Open",
+    "explorer": "Explorer",
+    "terminal": "Terminal",
+    "git": "Git",
+    "noRepo": "Not a git repository, or not read yet.",
+    "detached": "detached HEAD",
+    "commit": "Commit…",
+    "push": "Push",
+    "openRepo": "Open the repository",
+    "linkRepo": "Link a repository…",
+    "dismissError": "Dismiss",
+    "build": "Build",
+    "buildLabel": "Build command",
+    "run": "Run",
+    "remote": {
+      "title": "Link a repository",
+      "url": "Repository URL",
+      "cancel": "Cancel",
+      "save": "Link"
+    }
+  },
   "errors": {
     "not_a_project": "This project no longer exists: refresh the list.",
     "editor_missing": "This editor was not found on this computer.",
