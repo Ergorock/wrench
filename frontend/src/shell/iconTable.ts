@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Box, Code, Folder, GitBranch, GitFork, Keyboard, Monitor, Zap } from '@lucide/vue'
+import { Box, Code, Folder, FolderKanban, GitBranch, GitFork, Keyboard, Monitor, Zap } from '@lucide/vue'
 
 /**
  * Icons that can be looked up by name (category icons from `core/categories.py`, `MANIFEST.icon`
@@ -11,6 +11,7 @@ export const iconTable: Record<string, Component> = {
   box: Box,
   code: Code,
   folder: Folder,
+  'folder-kanban': FolderKanban,
   'git-branch': GitBranch,
   'git-fork': GitFork,
   keyboard: Keyboard,
