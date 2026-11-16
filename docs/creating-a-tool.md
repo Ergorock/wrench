@@ -39,7 +39,7 @@ Pour `windows_shortcuts`, le composant est `ShortcutsTool.vue` et le backend a u
 
 - **Id** : snake_case, expression régulière `^[a-z][a-z0-9_]*$`, unique, **identique au nom des deux dossiers** (`windows_shortcuts`).
 - **Version** : `^\d+\.\d+\.\d+$` (par exemple `1.0.0`).
-- **Catégorie** : l'id d'une catégorie existante de `backend/src/wrench/core/categories.py`. Catégories actuelles, dans l'ordre : `system` (icône `monitor`), `productivity` (`zap`), `development` (`code`), `files` (`folder`).
+- **Catégorie** : l'id d'une catégorie existante de `backend/src/wrench/core/categories.py`. Catégories actuelles, dans l'ordre : `system` (icône `monitor`), `productivity` (`zap`), `development` (`code`), `files` (`folder`), `m3` (`boxes`).
 - Les catégories sans outil actif sont masquées dans le bandeau.
 
 ### Ajouter une catégorie

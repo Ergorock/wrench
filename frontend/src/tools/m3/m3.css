@@ -1,0 +1,143 @@
+/* Shared by the four M3 tabs: every class is prefixed `m3-` so nothing leaks to other tools. */
+.m3-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.m3-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.m3-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.m3-muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.m3-panel input[type='text'],
+.m3-panel input[type='password'],
+.m3-panel textarea,
+.m3-panel select {
+  box-sizing: border-box;
+  padding: 6px 8px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.m3-panel textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+}
+
+.m3-panel button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.m3-panel button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.m3-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.m3-panel button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.m3-badge {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.m3-badge.on {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.m3-table-wrap {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.m3-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.m3-table th,
+.m3-table td {
+  padding: 5px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  user-select: text;
+}
+
+.m3-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  white-space: nowrap;
+}
+
+.m3-table th.sortable {
+  cursor: pointer;
+}
+
+.m3-table tbody tr:hover {
+  background: var(--hover);
+}
+
+.m3-table td.num,
+.m3-table th.num {
+  text-align: right;
+}
+
+.m3-log {
+  max-height: 160px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.m3-progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}

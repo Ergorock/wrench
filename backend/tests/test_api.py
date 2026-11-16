@@ -23,6 +23,7 @@ def test_bootstrap_shape(api: Api) -> None:
         "productivity",
         "development",
         "files",
+        "m3",
     ]
     assert r["data"]["autostart"] == {"available": False, "enabled": False}
 

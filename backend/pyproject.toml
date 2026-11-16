@@ -9,6 +9,8 @@ dependencies = [
     "send2trash>=2.2.0",
     "segno>=1.6.6",
     "python-barcode>=0.16.1",
+    "requests>=2.34.2",
+    "playwright>=1.65.2",
 ]
 
 [dependency-groups]
@@ -19,6 +21,7 @@ dev = [
     "pyinstaller>=6.11",
     "pillow>=11",
     "types-send2trash>=2.1.0.20260408",
+    "types-requests>=2.33.0.20261030",
 ]
 
 [build-system]

@@ -1,0 +1,127 @@
+{
+  "name": "M3 tools",
+  "description": "Export EDAs, list mashups, Ming.le workspaces and widgets, search XtendM3 code.",
+  "tabs": {
+    "eda": "EDA export",
+    "mashup": "Mashups",
+    "widgets": "Workspaces and widgets",
+    "xtend": "Xtend code"
+  },
+  "tenant": "Tenant",
+  "outputDir": "Working folder (exports, fetched code)",
+  "browse": "Browse…",
+  "cancel": "Cancel",
+  "status": {
+    "starting": "Starting…",
+    "edge_opened": "Edge is open: sign in, then open the relevant screen if needed.",
+    "connected": "Connected.",
+    "working": "Working…",
+    "finished": "Done."
+  },
+  "session": {
+    "connected": "Connected",
+    "disconnected": "Not connected",
+    "connect": "Connect (Edge)",
+    "reconnect": "Reconnect",
+    "hint": {
+      "eda": "Opens Edge on the M3 URL above.",
+      "mashup": "Opens Edge on the tenant’s H5 Administration.",
+      "xtend": "Opens Edge on the tenant’s XtendM3 administration.",
+      "workspaces": "Opens Edge on the tenant’s Ming.le portal."
+    }
+  },
+  "job": {
+    "counts": "{done} / {total} processed — {ok} succeeded, {failed} failed"
+  },
+  "eda": {
+    "baseUrl": "M3 URL",
+    "company": "Company",
+    "division": "Division",
+    "language": "Language",
+    "list": "EDAs to export (one per line, or paste the first column of a table)",
+    "placeholder": "EDA_001\nEDA_002",
+    "export": "Export {count} EDAs",
+    "target": "One JSON file per EDA in {dir}\\eda"
+  },
+  "mashup": {
+    "refresh": "Refresh",
+    "filter": "Filter on name or description…",
+    "count": "{count} of {total}",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "visibility": "Visibility",
+      "created_by": "Created by",
+      "changed_by": "Changed by",
+      "change_date": "Change date"
+    }
+  },
+  "widgets": {
+    "tokenTitle": "Sign in with a token (if capturing it in Edge is not enough)",
+    "tokenPlaceholder": "Value of x-infor-authorization",
+    "tokenUse": "Use this token",
+    "tokenHelp": "Copy the value of the x-infor-authorization header of a workspace/list request from the browser developer tools. The token expires after about 1 hour and is not kept.",
+    "list": "List",
+    "filter": "Filter on title or owner…",
+    "analyze": "Analyze selection ({count})",
+    "columns": {
+      "title": "Title",
+      "kind": "Type",
+      "owner": "Owner",
+      "changed": "Changed",
+      "widgetId": "Identifier",
+      "label": "Label",
+      "count": "Occurrences"
+    },
+    "kinds": { "workspaces": "Workspace", "insights": "Insight" },
+    "results": "{count} distinct widgets",
+    "exportCsv": "Export details as CSV",
+    "exported": "Details exported: {path}"
+  },
+  "xtend": {
+    "list": "List programs",
+    "filter": "Filter on program, name or description…",
+    "fetchSelected": "Fetch selection ({count})",
+    "fetchAll": "Fetch all",
+    "columns": {
+      "program": "Program",
+      "kind": "Type",
+      "name": "Name",
+      "description": "Description",
+      "modifiedBy": "Changed by"
+    },
+    "kinds": { "batch": "Batch", "transaction": "MI transaction" },
+    "searchTitle": "Search the fetched code",
+    "searchHelp": "The search reads the {dir}\\xtend folder, without any network call.",
+    "searchPlaceholder": "Text or regular expression…",
+    "regex": "Regex",
+    "caseSensitive": "Match case",
+    "search": "Search",
+    "hits": "{count} results. Click a line to open the code."
+  },
+  "errors": {
+    "busy": "Another operation is running.",
+    "not_connected": "Connect first (the “Connect” button).",
+    "session_expired": "Session expired: reconnect.",
+    "network_error": "Network error: the server cannot be reached.",
+    "http_error": "The server answered with an error.",
+    "bad_response": "Unexpected response from the server.",
+    "tenant_required": "Enter the tenant.",
+    "invalid_tenant": "Invalid tenant: letters, digits, “-” and “_” only.",
+    "base_url_required": "Enter the M3 URL.",
+    "login_cancelled": "Login cancelled.",
+    "login_timeout": "Timed out: no M3 request seen. Open the relevant screen in Edge.",
+    "edge_launch_failed": "Cannot start Edge (already open with Wrench’s profile, or not installed?).",
+    "edge_closed": "Edge was closed before the login finished.",
+    "no_session": "No session read: try connecting again.",
+    "no_eda": "No EDA to export.",
+    "nothing_selected": "Nothing selected.",
+    "nothing_listed": "List the programs first.",
+    "nothing_to_export": "Nothing to export: run an analysis first.",
+    "token_required": "Paste the session token.",
+    "unknown_file": "This code file cannot be found.",
+    "empty_query": "Enter some text to search for.",
+    "invalid_regex": "Invalid regular expression."
+  }
+}

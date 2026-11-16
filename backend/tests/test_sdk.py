@@ -127,4 +127,4 @@ def test_context_language(tmp_path):
 
 
 def test_categories():
-    assert category_ids() == ["system", "productivity", "development", "files"]
+    assert category_ids() == ["system", "productivity", "development", "files", "m3"]

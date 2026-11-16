@@ -1,0 +1,127 @@
+{
+  "name": "Outils M3",
+  "description": "Export des EDA, liste des mashups, workspaces et widgets Ming.le, recherche dans le code XtendM3.",
+  "tabs": {
+    "eda": "Export EDA",
+    "mashup": "Mashups",
+    "widgets": "Workspaces et widgets",
+    "xtend": "Code Xtend"
+  },
+  "tenant": "Tenant",
+  "outputDir": "Dossier de travail (exports, code récupéré)",
+  "browse": "Parcourir…",
+  "cancel": "Annuler",
+  "status": {
+    "starting": "Démarrage…",
+    "edge_opened": "Edge est ouvert : connectez-vous, puis ouvrez l’écran concerné si besoin.",
+    "connected": "Connecté.",
+    "working": "En cours…",
+    "finished": "Terminé."
+  },
+  "session": {
+    "connected": "Connecté",
+    "disconnected": "Non connecté",
+    "connect": "Se connecter (Edge)",
+    "reconnect": "Se reconnecter",
+    "hint": {
+      "eda": "Ouvre Edge sur l’URL M3 ci-dessus.",
+      "mashup": "Ouvre Edge sur H5 Administration du tenant.",
+      "xtend": "Ouvre Edge sur l’administration XtendM3 du tenant.",
+      "workspaces": "Ouvre Edge sur le portail Ming.le du tenant."
+    }
+  },
+  "job": {
+    "counts": "{done} / {total} traités — {ok} réussis, {failed} en erreur"
+  },
+  "eda": {
+    "baseUrl": "URL M3",
+    "company": "Société",
+    "division": "Division",
+    "language": "Langue",
+    "list": "EDA à exporter (un par ligne, ou collez la première colonne d’un tableau)",
+    "placeholder": "EDA_001\nEDA_002",
+    "export": "Exporter {count} EDA",
+    "target": "Un fichier JSON par EDA dans {dir}\\eda"
+  },
+  "mashup": {
+    "refresh": "Actualiser",
+    "filter": "Filtrer sur le nom ou la description…",
+    "count": "{count} sur {total}",
+    "columns": {
+      "name": "Nom",
+      "description": "Description",
+      "category": "Catégorie",
+      "visibility": "Visibilité",
+      "created_by": "Créé par",
+      "changed_by": "Modifié par",
+      "change_date": "Date de modification"
+    }
+  },
+  "widgets": {
+    "tokenTitle": "Connexion par jeton (si la capture dans Edge ne suffit pas)",
+    "tokenPlaceholder": "Valeur de x-infor-authorization",
+    "tokenUse": "Utiliser ce jeton",
+    "tokenHelp": "Copiez la valeur de l’en-tête x-infor-authorization d’une requête workspace/list dans les outils de développement du navigateur. Le jeton expire après environ 1 heure et n’est pas conservé.",
+    "list": "Lister",
+    "filter": "Filtrer sur le titre ou le propriétaire…",
+    "analyze": "Analyser la sélection ({count})",
+    "columns": {
+      "title": "Titre",
+      "kind": "Type",
+      "owner": "Propriétaire",
+      "changed": "Modifié",
+      "widgetId": "Identifiant",
+      "label": "Libellé",
+      "count": "Occurrences"
+    },
+    "kinds": { "workspaces": "Workspace", "insights": "Insight" },
+    "results": "{count} widgets distincts",
+    "exportCsv": "Exporter le détail en CSV",
+    "exported": "Détail exporté : {path}"
+  },
+  "xtend": {
+    "list": "Lister les programmes",
+    "filter": "Filtrer sur le programme, le nom ou la description…",
+    "fetchSelected": "Récupérer la sélection ({count})",
+    "fetchAll": "Récupérer tout",
+    "columns": {
+      "program": "Programme",
+      "kind": "Type",
+      "name": "Nom",
+      "description": "Description",
+      "modifiedBy": "Modifié par"
+    },
+    "kinds": { "batch": "Batch", "transaction": "Transaction MI" },
+    "searchTitle": "Recherche dans le code récupéré",
+    "searchHelp": "La recherche travaille sur le dossier {dir}\\xtend, sans réseau.",
+    "searchPlaceholder": "Texte ou expression régulière…",
+    "regex": "Regex",
+    "caseSensitive": "Respecter la casse",
+    "search": "Rechercher",
+    "hits": "{count} résultats. Cliquez sur une ligne pour ouvrir le code."
+  },
+  "errors": {
+    "busy": "Une autre opération est en cours.",
+    "not_connected": "Connectez-vous d’abord (bouton « Se connecter »).",
+    "session_expired": "Session expirée : reconnectez-vous.",
+    "network_error": "Erreur réseau : le serveur est injoignable.",
+    "http_error": "Le serveur a répondu par une erreur.",
+    "bad_response": "Réponse inattendue du serveur.",
+    "tenant_required": "Renseignez le tenant.",
+    "invalid_tenant": "Tenant invalide : lettres, chiffres, « - » et « _ » uniquement.",
+    "base_url_required": "Renseignez l’URL M3.",
+    "login_cancelled": "Connexion annulée.",
+    "login_timeout": "Délai dépassé : aucune requête M3 détectée. Ouvrez l’écran concerné dans Edge.",
+    "edge_launch_failed": "Impossible de lancer Edge (déjà ouvert avec le profil de Wrench, ou non installé ?).",
+    "edge_closed": "Edge a été fermé avant la fin de la connexion.",
+    "no_session": "Aucune session lue : réessayez la connexion.",
+    "no_eda": "Aucun EDA à exporter.",
+    "nothing_selected": "Aucun élément sélectionné.",
+    "nothing_listed": "Listez d’abord les programmes.",
+    "nothing_to_export": "Rien à exporter : lancez d’abord une analyse.",
+    "token_required": "Collez le jeton de session.",
+    "unknown_file": "Ce fichier de code est introuvable.",
+    "empty_query": "Saisissez un texte à rechercher.",
+    "invalid_regex": "Expression régulière invalide."
+  }
+}

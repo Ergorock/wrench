@@ -12,6 +12,7 @@ CATEGORIES: tuple[Category, ...] = (
     Category("productivity", "zap"),
     Category("development", "code"),
     Category("files", "folder"),
+    Category("m3", "boxes"),
 )
 
 

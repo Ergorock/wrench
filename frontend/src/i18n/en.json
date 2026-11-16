@@ -13,7 +13,8 @@
     "system": "System",
     "productivity": "Productivity",
     "development": "Development",
-    "files": "Files"
+    "files": "Files",
+    "m3": "M3"
   },
   "home": {
     "title": "Welcome to Wrench",

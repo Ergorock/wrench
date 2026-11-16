@@ -10,12 +10,14 @@ Wrench est une application de bureau Windows qui regroupe de petits outils du qu
   - **Éditeurs** (Paramètres) : chemin de chaque éditeur. Limite : Claude ouvre l'application de bureau, sans contexte (le dossier du projet n'est pas transmis) ; Kiro et VS Code ouvrent le dossier.
   - **Prérequis** : lus d'abord dans les fichiers standard du projet (`package.json`, `pyproject.toml`, etc.), puis dans la section `## Prérequis` du README. Seule la commande `<outil> --version` est exécutée, jamais un script du projet.
 - **Outils dev** : quatre onglets. Encodage et décodage Base64 ou URL ; choix d'une couleur, avec conversion en hexadécimal, RVB et TSL ; mise en forme et minification JSON ; mise en forme XML (les commentaires sont conservés).
+- **Outils M3** (catégorie M3) : quatre onglets pour Infor M3 / Ming.le. Export EDA (un JSON par EDA), liste des mashups (filtre, tri), workspaces et widgets (recensement des widgets, export CSV), code XtendM3 (sources Groovy récupérées dans un dossier local, puis recherche texte ou regex hors ligne). La connexion passe par l'Edge installé sur le poste, piloté par Playwright : vous vous connectez vous-même (SSO, MFA) et aucun mot de passe n'est lu ni stocké. Le profil Edge dédié (`%LOCALAPPDATA%\Wrench\m3-edge-profile`) contient des cookies de session : ne pas le partager. Ces API sont internes à Infor et non contractuelles ; une session expirée demande de se reconnecter.
 
 ## Prérequis
 
 - Python 3.12 et [uv](https://docs.astral.sh/uv/)
 - Node.js 22 ou plus récent
 - Runtime WebView2 de Microsoft (présent par défaut sur Windows 11)
+- Microsoft Edge, pour les Outils M3 uniquement (aucun navigateur à télécharger)
 
 ## Installation
 
