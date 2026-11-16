@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Plug, X } from '@lucide/vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useM3 } from './useM3'
@@ -34,11 +35,15 @@ async function cancel(): Promise<void> {
       {{ t(`${PREFIX}${connected ? 'session.connected' : 'session.disconnected'}`) }}
     </span>
     <button type="button" class="primary" :disabled="busy" @click="login">
+      <Plug :size="15" class="m3-icon" />
       {{ t(`${PREFIX}${connected ? 'session.reconnect' : 'session.connect'}`) }}
     </button>
     <template v-if="loggingIn">
       <span class="m3-muted">{{ t(`${PREFIX}status.${job?.status || 'starting'}`) }}</span>
-      <button type="button" @click="cancel">{{ t(`${PREFIX}cancel`) }}</button>
+      <button type="button" @click="cancel">
+        <X :size="15" class="m3-icon" />
+        {{ t(`${PREFIX}cancel`) }}
+      </button>
     </template>
     <span v-else class="m3-muted">{{ t(`${PREFIX}session.hint.${target}`) }}</span>
   </div>

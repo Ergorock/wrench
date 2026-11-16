@@ -62,9 +62,9 @@ async function mountTool(): Promise<void> {
   await flush()
 }
 
-function button(label: string): HTMLButtonElement {
-  const found = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
-    b.textContent?.trim().startsWith(label),
+function button(label: string, contains = ''): HTMLButtonElement {
+  const found = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+    (b) => b.textContent?.trim().startsWith(label) && b.textContent.includes(contains),
   )
   if (!found) throw new Error(`button ${label} not found`)
   return found
@@ -101,7 +101,7 @@ describe('M3Tool', () => {
   it('keeps the export disabled until connected and EDAs are given, then exports them', async () => {
     state = idleState(true)
     await mountTool()
-    const exportButton = (): HTMLButtonElement => button('Export')
+    const exportButton = (): HTMLButtonElement => button('Export ', 'EDAs')
     expect(exportButton().disabled).toBe(true)
 
     const area = host.querySelector<HTMLTextAreaElement>('textarea')!

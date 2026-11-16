@@ -146,24 +146,33 @@ def _widget_nodes(node: Any) -> Iterator[dict[str, Any]]:
         yield from _widget_nodes(node.get("nodes"))
 
 
-def widgets_in_zip(zip_bytes: bytes) -> list[Occurrence]:
+def widgets_in_zip(zip_bytes: bytes, report: list[str] | None = None) -> list[Occurrence]:
+    """Occurrences de widgets de tous les JSON de l'archive (quelle que soit l'extension).
+
+    `report` reçoit une ligne par fichier (nom, clés racine, nombre de widgets) pour diagnostiquer
+    un export au format inattendu."""
     found: list[Occurrence] = []
+    lines = report if report is not None else []
     try:
         archive = zipfile.ZipFile(io.BytesIO(zip_bytes))
     except zipfile.BadZipFile as exc:
         raise ToolError("bad_response", "The export is not a valid ZIP") from exc
     with archive:
-        for name in archive.namelist():
-            if not name.lower().endswith(".json"):
+        lines.append(f"zip: {len(archive.infolist())} entries")
+        for info in archive.infolist():
+            if info.is_dir():
                 continue
             try:
-                page = json.loads(archive.read(name).decode("utf-8"))
+                page = json.loads(archive.read(info).decode("utf-8-sig"))
             except (UnicodeDecodeError, json.JSONDecodeError):
+                lines.append(f"{info.filename}: not JSON ({info.file_size} B)")
                 continue
             if not isinstance(page, dict):
+                lines.append(f"{info.filename}: JSON {type(page).__name__}")
                 continue
             dashboard = page.get("dashboard")
             containers = dashboard.get("containers", []) if isinstance(dashboard, dict) else []
+            before = len(found)
             for node in _widget_nodes(containers):
                 ref = node.get("ref") or {}
                 data = node.get("data") or {}
@@ -177,6 +186,8 @@ def widgets_in_zip(zip_bytes: bytes) -> list[Occurrence]:
                             str(page.get("title", "")),
                         )
                     )
+            keys = ",".join(list(page)[:8])
+            lines.append(f"{info.filename}: {len(found) - before} widgets (keys: {keys})")
     return found
 
 
@@ -220,10 +231,17 @@ def aggregate(occurrences: list[Occurrence]) -> tuple[list[WidgetTotal], list[Wi
 
 
 def write_csv(path: Path, rows: list[WidgetRow]) -> None:
+    write_table_csv(
+        path,
+        ["Identifiant", "Libellé", "Workspace", "Id workspace", "Occurrences"],
+        [[r.widget_id, r.label, r.workspace_title, r.workspace_id, r.count] for r in rows],
+    )
+
+
+def write_table_csv(path: Path, header: list[str], rows: list[list[str | int]]) -> None:
     """CSV `;`, utf-8-sig (ouverture directe dans Excel)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.writer(fh, delimiter=";")
-        writer.writerow(["Identifiant", "Libellé", "Workspace", "Id workspace", "Occurrences"])
-        for r in rows:
-            writer.writerow([r.widget_id, r.label, r.workspace_title, r.workspace_id, r.count])
+        writer.writerow(header)
+        writer.writerows(rows)

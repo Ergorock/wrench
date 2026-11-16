@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { RefreshCw } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import CsvButton from './CsvButton.vue'
 import SessionBar from './SessionBar.vue'
 import { filterRows, sortRows } from './logic'
 import type { Mashup } from './types'
@@ -36,6 +38,19 @@ const rows = computed(() =>
 const busy = computed(() => m3.state.value?.job.running === true)
 const connected = computed(() => m3.state.value?.connected.mashup === true)
 
+const csvRows = computed(() => rows.value.map((a) => COLUMNS.map((c) => a[c])))
+
+/** `2026-01-31T10:00:00UTC` shown in the user's locale. */
+function show(column: Column, value: string | number): string {
+  if (column !== 'change_date' || typeof value !== 'string' || value === '') return String(value)
+  const date = new Date(value.replace('UTC', 'Z'))
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
+function cellClass(column: Column): string {
+  return column === 'description' ? 'clamp' : 'nowrap'
+}
+
 function sort(column: Column): void {
   if (sortBy.value === column) desc.value = !desc.value
   else {
@@ -63,9 +78,15 @@ m3.onJobEnd((job) => {
     <SessionBar target="mashup" />
     <div class="m3-row">
       <button type="button" :disabled="busy || !connected" @click="load">
+        <RefreshCw :size="15" class="m3-icon" />
         {{ t(`${PREFIX}refresh`) }}
       </button>
       <input v-model="query" type="text" :placeholder="t(`${PREFIX}filter`)" :disabled="apps === null" />
+      <CsvButton
+        name="mashups"
+        :header="COLUMNS.map((c) => t(`${PREFIX}columns.${c}`))"
+        :rows="csvRows"
+      />
       <span v-if="apps !== null" class="m3-muted">
         {{ t(`${PREFIX}count`, { count: rows.length, total: apps.length }) }}
       </span>
@@ -81,7 +102,9 @@ m3.onJobEnd((job) => {
         </thead>
         <tbody>
           <tr v-for="a in rows" :key="a.name">
-            <td v-for="c in COLUMNS" :key="c">{{ a[c] }}</td>
+            <td v-for="c in COLUMNS" :key="c" :class="cellClass(c)" :title="String(a[c])">
+              {{ show(c, a[c]) }}
+            </td>
           </tr>
         </tbody>
       </table>

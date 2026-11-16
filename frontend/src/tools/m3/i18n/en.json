@@ -31,7 +31,8 @@
     }
   },
   "job": {
-    "counts": "{done} / {total} processed — {ok} succeeded, {failed} failed"
+    "counts": "{done} / {total} processed — {ok} succeeded, {failed} failed",
+    "details": "Details ({count})"
   },
   "eda": {
     "baseUrl": "M3 URL",
@@ -41,7 +42,12 @@
     "list": "EDAs to export (one per line, or paste the first column of a table)",
     "placeholder": "EDA_001\nEDA_002",
     "export": "Export {count} EDAs",
-    "target": "One JSON file per EDA in {dir}\\eda"
+    "target": "One JSON file per EDA in {dir}\\eda",
+    "listEdas": "List EDAs",
+    "filter": "Filter…",
+    "addSelected": "Add to the list ({count})",
+    "count": "{count} of {total}",
+    "selectAll": "Select all"
   },
   "mashup": {
     "refresh": "Refresh",
@@ -74,10 +80,14 @@
       "label": "Label",
       "count": "Occurrences"
     },
-    "kinds": { "workspaces": "Workspace", "insights": "Insight" },
+    "kinds": {
+      "workspaces": "Workspace",
+      "insights": "Insight"
+    },
     "results": "{count} distinct widgets",
     "exportCsv": "Export details as CSV",
-    "exported": "Details exported: {path}"
+    "exported": "Details exported: {path}",
+    "selectAll": "Select all"
   },
   "xtend": {
     "list": "List programs",
@@ -91,14 +101,20 @@
       "description": "Description",
       "modifiedBy": "Changed by"
     },
-    "kinds": { "batch": "Batch", "transaction": "MI transaction" },
+    "kinds": {
+      "batch": "Batch",
+      "transaction": "MI transaction"
+    },
     "searchTitle": "Search the fetched code",
     "searchHelp": "The search reads the {dir}\\xtend folder, without any network call.",
     "searchPlaceholder": "Text or regular expression…",
     "regex": "Regex",
     "caseSensitive": "Match case",
     "search": "Search",
-    "hits": "{count} results. Click a line to open the code."
+    "hits": "{count} results. Click a line to open the code.",
+    "selectAll": "Select all",
+    "hitLine": "Line",
+    "hitText": "Text"
   },
   "errors": {
     "busy": "Another operation is running.",
@@ -123,5 +139,15 @@
     "unknown_file": "This code file cannot be found.",
     "empty_query": "Enter some text to search for.",
     "invalid_regex": "Invalid regular expression."
+  },
+  "tabHelp": {
+    "eda": "Exports each EDA definition as JSON.",
+    "mashup": "Lists the tenant’s apps (mashups), with filter and sort.",
+    "widgets": "Counts the widgets used in workspaces and insights.",
+    "xtend": "Fetches the XtendM3 Groovy code, then browses it offline."
+  },
+  "csv": {
+    "export": "Export as CSV",
+    "saved": "CSV saved: {path}"
   }
 }

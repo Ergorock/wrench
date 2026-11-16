@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { Download, List, Search } from '@lucide/vue'
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JobPanel from './JobPanel.vue'
+import CsvButton from './CsvButton.vue'
 import SessionBar from './SessionBar.vue'
-import { filterRows } from './logic'
+import { filterRows, toggleAll } from './logic'
 import type { XtendHit, XtendSource } from './types'
 import { useM3 } from './useM3'
 
@@ -20,6 +22,27 @@ const connected = computed(() => m3.state.value?.connected.xtend === true)
 const rows = computed(() =>
   filterRows(sources.value ?? [], query.value, (s) => [s.program, s.name, s.description]),
 )
+
+const allSelected = computed(
+  () => rows.value.length > 0 && rows.value.every((s) => selected.value.has(s.uuid)),
+)
+const someSelected = computed(
+  () => !allSelected.value && rows.value.some((s) => selected.value.has(s.uuid)),
+)
+const sourcesCsv = computed(() =>
+  rows.value.map((s) => [s.program, t(`${PREFIX}kinds.${s.kind}`), s.name, s.description, s.modified_by]),
+)
+
+const hitsCsv = computed(() =>
+  (hits.value ?? []).map((h) => [h.program, h.kind, h.name, h.line, h.snippet]),
+)
+
+function toggleEvery(): void {
+  selected.value = toggleAll(
+    selected.value,
+    rows.value.map((s) => s.uuid),
+  )
+}
 
 async function list(): Promise<void> {
   try {
@@ -96,21 +119,44 @@ m3.onJobEnd((job) => {
     <SessionBar target="xtend" />
 
     <div class="m3-row">
-      <button type="button" :disabled="busy || !connected" @click="list">{{ t(`${PREFIX}list`) }}</button>
+      <button type="button" :disabled="busy || !connected" @click="list">
+        <List :size="15" class="m3-icon" />
+        {{ t(`${PREFIX}list`) }}
+      </button>
       <input v-model="query" type="text" :placeholder="t(`${PREFIX}filter`)" :disabled="sources === null" />
       <button type="button" :disabled="busy || !connected || selected.size === 0" @click="fetchCode(false)">
         {{ t(`${PREFIX}fetchSelected`, { count: selected.size }) }}
       </button>
       <button type="button" class="primary" :disabled="busy || !connected || sources === null" @click="fetchCode(true)">
+        <Download :size="15" class="m3-icon" />
         {{ t(`${PREFIX}fetchAll`) }}
       </button>
+      <CsvButton
+        name="xtend"
+        :header="[
+          t(`${PREFIX}columns.program`),
+          t(`${PREFIX}columns.kind`),
+          t(`${PREFIX}columns.name`),
+          t(`${PREFIX}columns.description`),
+          t(`${PREFIX}columns.modifiedBy`),
+        ]"
+        :rows="sourcesCsv"
+      />
     </div>
 
     <div v-if="sources !== null" class="m3-table-wrap">
       <table class="m3-table">
         <thead>
           <tr>
-            <th></th>
+            <th>
+              <input
+                type="checkbox"
+                :checked="allSelected"
+                :indeterminate.prop="someSelected"
+                :aria-label="t(`${PREFIX}selectAll`)"
+                @change="toggleEvery"
+              />
+            </th>
             <th>{{ t(`${PREFIX}columns.program`) }}</th>
             <th>{{ t(`${PREFIX}columns.kind`) }}</th>
             <th>{{ t(`${PREFIX}columns.name`) }}</th>
@@ -144,11 +190,27 @@ m3.onJobEnd((job) => {
       <label v-for="k in ['batch', 'transaction']" :key="k" class="m3-muted">
         <input type="checkbox" :checked="kinds.has(k)" @change="toggleKind(k)" /> {{ t(`${PREFIX}kinds.${k}`) }}
       </label>
-      <button type="submit" class="primary" :disabled="search.trim() === ''">{{ t(`${PREFIX}search`) }}</button>
+      <button type="submit" class="primary" :disabled="search.trim() === ''">
+        <Search :size="15" class="m3-icon" />
+        {{ t(`${PREFIX}search`) }}
+      </button>
     </form>
 
     <template v-if="hits !== null">
-      <p class="m3-muted">{{ t(`${PREFIX}hits`, { count: hits.length }) }}</p>
+      <div class="m3-row">
+        <p class="m3-muted">{{ t(`${PREFIX}hits`, { count: hits.length }) }}</p>
+        <CsvButton
+          name="xtend_search"
+          :header="[
+            t(`${PREFIX}columns.program`),
+            t(`${PREFIX}columns.kind`),
+            t(`${PREFIX}columns.name`),
+            t(`${PREFIX}hitLine`),
+            t(`${PREFIX}hitText`),
+          ]"
+          :rows="hitsCsv"
+        />
+      </div>
       <div v-if="hits.length > 0" class="m3-table-wrap">
         <table class="m3-table">
           <tbody>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countEdas, filterRows, sortRows } from '../src/tools/m3/logic'
+import { countEdas, filterRows, sortRows, toggleAll } from '../src/tools/m3/logic'
 
 describe('filterRows', () => {
   const rows = [{ n: 'Alpha', d: 'first' }, { n: 'Beta', d: 'ALPHA twin' }, { n: 'Gamma', d: '' }]
@@ -27,5 +27,15 @@ describe('countEdas', () => {
   it('counts distinct first columns and skips blank lines', () => {
     expect(countEdas('A;x\r\n\r\nB\tz\nA\n')).toBe(2)
     expect(countEdas('')).toBe(0)
+  })
+})
+
+describe('toggleAll', () => {
+  it('selects every visible id, keeps hidden ones, and clears when all are selected', () => {
+    const all = toggleAll(new Set(['hidden']), ['a', 'b'])
+    expect([...all].sort()).toEqual(['a', 'b', 'hidden'])
+    expect([...toggleAll(all, ['a', 'b'])]).toEqual(['hidden'])
+    expect(toggleAll(new Set(['a']), ['a', 'b']).has('b')).toBe(true)
+    expect(toggleAll(new Set(), []).size).toBe(0)
   })
 })

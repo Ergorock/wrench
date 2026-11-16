@@ -31,7 +31,8 @@
     }
   },
   "job": {
-    "counts": "{done} / {total} traités — {ok} réussis, {failed} en erreur"
+    "counts": "{done} / {total} traités — {ok} réussis, {failed} en erreur",
+    "details": "Détails ({count})"
   },
   "eda": {
     "baseUrl": "URL M3",
@@ -41,7 +42,12 @@
     "list": "EDA à exporter (un par ligne, ou collez la première colonne d’un tableau)",
     "placeholder": "EDA_001\nEDA_002",
     "export": "Exporter {count} EDA",
-    "target": "Un fichier JSON par EDA dans {dir}\\eda"
+    "target": "Un fichier JSON par EDA dans {dir}\\eda",
+    "listEdas": "Lister les EDA",
+    "filter": "Filtrer…",
+    "addSelected": "Ajouter à la liste ({count})",
+    "count": "{count} sur {total}",
+    "selectAll": "Tout sélectionner"
   },
   "mashup": {
     "refresh": "Actualiser",
@@ -74,10 +80,14 @@
       "label": "Libellé",
       "count": "Occurrences"
     },
-    "kinds": { "workspaces": "Workspace", "insights": "Insight" },
+    "kinds": {
+      "workspaces": "Workspace",
+      "insights": "Insight"
+    },
     "results": "{count} widgets distincts",
     "exportCsv": "Exporter le détail en CSV",
-    "exported": "Détail exporté : {path}"
+    "exported": "Détail exporté : {path}",
+    "selectAll": "Tout sélectionner"
   },
   "xtend": {
     "list": "Lister les programmes",
@@ -91,14 +101,20 @@
       "description": "Description",
       "modifiedBy": "Modifié par"
     },
-    "kinds": { "batch": "Batch", "transaction": "Transaction MI" },
+    "kinds": {
+      "batch": "Batch",
+      "transaction": "Transaction MI"
+    },
     "searchTitle": "Recherche dans le code récupéré",
     "searchHelp": "La recherche travaille sur le dossier {dir}\\xtend, sans réseau.",
     "searchPlaceholder": "Texte ou expression régulière…",
     "regex": "Regex",
     "caseSensitive": "Respecter la casse",
     "search": "Rechercher",
-    "hits": "{count} résultats. Cliquez sur une ligne pour ouvrir le code."
+    "hits": "{count} résultats. Cliquez sur une ligne pour ouvrir le code.",
+    "selectAll": "Tout sélectionner",
+    "hitLine": "Ligne",
+    "hitText": "Texte"
   },
   "errors": {
     "busy": "Une autre opération est en cours.",
@@ -123,5 +139,15 @@
     "unknown_file": "Ce fichier de code est introuvable.",
     "empty_query": "Saisissez un texte à rechercher.",
     "invalid_regex": "Expression régulière invalide."
+  },
+  "tabHelp": {
+    "eda": "Exporte la définition de chaque EDA en JSON.",
+    "mashup": "Liste les apps (mashups) du tenant, avec filtre et tri.",
+    "widgets": "Recense les widgets utilisés dans les workspaces et insights.",
+    "xtend": "Récupère le code Groovy d’XtendM3 puis le parcourt hors ligne."
+  },
+  "csv": {
+    "export": "Exporter en CSV",
+    "saved": "CSV enregistré : {path}"
   }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from '@lucide/vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useM3 } from './useM3'
@@ -26,9 +27,15 @@ async function cancel(): Promise<void> {
       <span class="m3-muted">
         {{ t(`${PREFIX}job.counts`, { done: job.done, total: job.total, ok: job.ok, failed: job.failed }) }}
       </span>
-      <button v-if="job.running" type="button" @click="cancel">{{ t(`${PREFIX}cancel`) }}</button>
+      <button v-if="job.running" type="button" @click="cancel">
+        <X :size="15" class="m3-icon" />
+        {{ t(`${PREFIX}cancel`) }}
+      </button>
     </div>
-    <progress class="m3-progress" :max="Math.max(job.total, 1)" :value="job.done" />
-    <pre v-if="job.log.length > 0" class="m3-log">{{ job.log.join('\n') }}</pre>
+    <progress v-if="job.running" class="m3-progress" :max="Math.max(job.total, 1)" :value="job.done" />
+    <details v-if="job.log.length > 0" class="log" :open="job.failed > 0 && !job.running">
+      <summary class="m3-muted">{{ t(`${PREFIX}job.details`, { count: job.log.length }) }}</summary>
+      <pre class="m3-log">{{ job.log.join('\n') }}</pre>
+    </details>
   </div>
 </template>

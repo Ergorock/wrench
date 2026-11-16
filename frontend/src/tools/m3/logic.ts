@@ -15,6 +15,17 @@ export function sortRows<T>(rows: T[], key: (row: T) => string | number, desc: b
   })
 }
 
+/** Selection after the header checkbox is toggled: every visible id when not all are selected, else none. */
+export function toggleAll(selected: Set<string>, visible: string[]): Set<string> {
+  const next = new Set(selected)
+  const all = visible.length > 0 && visible.every((id) => next.has(id))
+  for (const id of visible) {
+    if (all) next.delete(id)
+    else next.add(id)
+  }
+  return next
+}
+
 /** EDA identifiers typed or pasted, one per line: the number of distinct, non-empty first columns. */
 export function countEdas(text: string): number {
   const ids = text

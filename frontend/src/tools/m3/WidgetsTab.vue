@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { BarChart3, Download, List } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pushToast } from '../../shell/toasts'
 import JobPanel from './JobPanel.vue'
+import CsvButton from './CsvButton.vue'
 import SessionBar from './SessionBar.vue'
-import { filterRows } from './logic'
+import { filterRows, toggleAll } from './logic'
 import type { Workspace, WsResult } from './types'
 import { useM3 } from './useM3'
 
@@ -52,6 +54,23 @@ async function list(): Promise<void> {
   }
 }
 
+const allSelected = computed(
+  () => rows.value.length > 0 && rows.value.every((i) => selected.value.has(i.id)),
+)
+const someSelected = computed(
+  () => !allSelected.value && rows.value.some((i) => selected.value.has(i.id)),
+)
+const listCsv = computed(() =>
+  rows.value.map((i) => [i.title, t(`${PREFIX}kinds.${i.kind}`), i.owner, i.changed]),
+)
+
+function toggleEvery(): void {
+  selected.value = toggleAll(
+    selected.value,
+    rows.value.map((i) => i.id),
+  )
+}
+
 function toggle(id: string): void {
   const next = new Set(selected.value)
   if (!next.delete(id)) next.add(id)
@@ -97,7 +116,10 @@ m3.onJobEnd(async (job) => {
     </details>
 
     <div class="m3-row">
-      <button type="button" :disabled="busy || !connected" @click="list">{{ t(`${PREFIX}list`) }}</button>
+      <button type="button" :disabled="busy || !connected" @click="list">
+        <List :size="15" class="m3-icon" />
+        {{ t(`${PREFIX}list`) }}
+      </button>
       <input v-model="query" type="text" :placeholder="t(`${PREFIX}filter`)" :disabled="items === null" />
       <button
         type="button"
@@ -105,15 +127,34 @@ m3.onJobEnd(async (job) => {
         :disabled="busy || !connected || selected.size === 0"
         @click="analyze"
       >
+        <BarChart3 :size="15" class="m3-icon" />
         {{ t(`${PREFIX}analyze`, { count: selected.size }) }}
       </button>
+      <CsvButton
+        name="workspaces"
+        :header="[
+          t(`${PREFIX}columns.title`),
+          t(`${PREFIX}columns.kind`),
+          t(`${PREFIX}columns.owner`),
+          t(`${PREFIX}columns.changed`),
+        ]"
+        :rows="listCsv"
+      />
     </div>
 
     <div v-if="items !== null" class="m3-table-wrap">
       <table class="m3-table">
         <thead>
           <tr>
-            <th></th>
+            <th>
+              <input
+                type="checkbox"
+                :checked="allSelected"
+                :indeterminate.prop="someSelected"
+                :aria-label="t(`${PREFIX}selectAll`)"
+                @change="toggleEvery"
+              />
+            </th>
             <th>{{ t(`${PREFIX}columns.title`) }}</th>
             <th>{{ t(`${PREFIX}columns.kind`) }}</th>
             <th>{{ t(`${PREFIX}columns.owner`) }}</th>
@@ -138,6 +179,7 @@ m3.onJobEnd(async (job) => {
       <div class="m3-row">
         <strong>{{ t(`${PREFIX}results`, { count: result.totals.length }) }}</strong>
         <button type="button" :disabled="result.rows.length === 0" @click="exportCsv">
+          <Download :size="15" class="m3-icon" />
           {{ t(`${PREFIX}exportCsv`) }}
         </button>
       </div>

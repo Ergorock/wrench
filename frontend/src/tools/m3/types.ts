@@ -79,3 +79,8 @@ export interface XtendHit {
   line: number
   snippet: string
 }
+
+export interface EdaItem {
+  id: string
+  fields: Record<string, string>
+}

@@ -30,8 +30,9 @@
 .m3-panel textarea,
 .m3-panel select {
   box-sizing: border-box;
-  padding: 6px 8px;
-  background: var(--bg-elevated);
+  height: 32px;
+  padding: 0 10px;
+  background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -40,26 +41,42 @@
 
 .m3-panel textarea {
   width: 100%;
+  height: auto;
+  padding: 8px 10px;
   resize: vertical;
   font-family: Consolas, 'Cascadia Mono', monospace;
 }
 
 .m3-panel button {
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
+  border-radius: 6px;
+  background: var(--bg);
   color: var(--text);
   font: inherit;
   cursor: pointer;
+  transition: background 0.12s;
 }
 
 .m3-panel button:hover:not(:disabled) {
   background: var(--hover);
 }
 
+.m3-panel button:active:not(:disabled) {
+  background: var(--active);
+}
+
+.m3-panel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .m3-panel button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -67,6 +84,32 @@
   background: var(--accent);
   color: var(--accent-text);
   border-color: var(--accent);
+  font-weight: 600;
+}
+
+.m3-panel button.primary:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.1);
+}
+
+.m3-icon {
+  flex: none;
+}
+
+.m3-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.m3-card .m3-panel input[type='text'],
+.m3-card .m3-panel input[type='password'],
+.m3-card .m3-panel textarea {
+  background: var(--bg);
 }
 
 .m3-badge {
@@ -83,8 +126,9 @@
 }
 
 .m3-table-wrap {
-  max-height: 340px;
+  max-height: 380px;
   overflow: auto;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -110,6 +154,17 @@
   white-space: nowrap;
 }
 
+.m3-table td.nowrap {
+  white-space: nowrap;
+}
+
+.m3-table td.clamp {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .m3-table th.sortable {
   cursor: pointer;
 }
@@ -128,12 +183,16 @@
   margin: 0;
   padding: 8px;
   overflow: auto;
-  background: var(--bg-elevated);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-family: Consolas, 'Cascadia Mono', monospace;
   font-size: 12px;
   white-space: pre-wrap;
+}
+
+.log summary {
+  cursor: pointer;
 }
 
 .m3-progress {

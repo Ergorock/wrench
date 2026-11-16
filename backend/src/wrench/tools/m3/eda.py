@@ -4,7 +4,9 @@ import re
 from pathlib import Path
 
 import requests
+from pydantic import BaseModel
 
+from wrench.sdk import ToolError
 from wrench.tools.m3.http import call, json_of
 from wrench.tools.m3.session import RequestMatcher, Session
 
@@ -32,6 +34,68 @@ def parse_edas(text: str) -> list[str]:
     if values and values[0].lower() in ("eda", "{eda}", "shortid"):
         values = values[1:]
     return list(dict.fromkeys(values))
+
+
+PAGE_SIZE = 50
+MAX_PAGES = 100
+_ID_KEYS = ("shortId", "short_id", "id", "name")
+
+
+class EdaItem(BaseModel):
+    id: str
+    fields: dict[str, str]  # champs simples de l'entrée, tels que renvoyés par le serveur
+
+
+def parse_list(payload: object) -> list[EdaItem]:
+    """Entrées de `/mnerest/ux/dev/list` : la liste est sous `content` (ou la première liste de
+    la réponse) ; `id` est le premier champ connu parmi shortId, id, name."""
+    entries: object = None
+    if isinstance(payload, list):
+        entries = payload
+    elif isinstance(payload, dict):
+        entries = payload.get("content")
+        if not isinstance(entries, list):
+            entries = next((v for v in payload.values() if isinstance(v, list)), None)
+    if not isinstance(entries, list):
+        raise ToolError("bad_response", "Unexpected EDA list response")
+    items = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        fields = {k: str(v) for k, v in entry.items() if isinstance(v, str | int | float | bool)}
+        ident = next((fields[k] for k in _ID_KEYS if fields.get(k)), "")
+        if ident:
+            items.append(EdaItem(id=ident, fields=fields))
+    return items
+
+
+def list_edas(session: Session, http: requests.Session | None = None) -> list[EdaItem]:
+    items: list[EdaItem] = []
+    for page in range(MAX_PAGES):
+        resp = call(
+            "POST",
+            session,
+            "/mnerest/ux/dev/list",
+            referer="/mne/ext/h5xi/",
+            json_body={
+                "paging": {"offset": page * PAGE_SIZE, "isEnd": False},
+                "sortBy": 4,
+                "sortOrder": 2,
+                "filters": [{"filterType": 0}],
+                "pageSize": PAGE_SIZE,
+                "query": "",
+            },
+            headers={"Content-Type": "application/json"},
+            http=http,
+        )
+        payload = json_of(resp)
+        batch = parse_list(payload)
+        items.extend(batch)
+        paging = payload.get("paging") if isinstance(payload, dict) else None
+        is_end = isinstance(paging, dict) and paging.get("isEnd") is True
+        if is_end or len(batch) < PAGE_SIZE:
+            break
+    return list(dict((i.id, i) for i in items).values())
 
 
 def fetch_eda(

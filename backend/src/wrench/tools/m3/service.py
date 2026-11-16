@@ -84,6 +84,7 @@ class M3Service(ToolService):
         self._sessions: dict[str, Session] = {}
         self._xtend_sources: dict[str, xtend.Source] = {}
         self._ws_result = WsResult(totals=[], rows=[])
+        self._ws_titles: dict[str, str] = {}
 
     # --- configuration -------------------------------------------------------------
 
@@ -245,6 +246,10 @@ class M3Service(ToolService):
     # --- Export EDA ----------------------------------------------------------------
 
     @action
+    def eda_list(self) -> list[eda.EdaItem]:
+        return self._guard("eda", lambda s: eda.list_edas(s))
+
+    @action
     def eda_export(self, edas: str) -> None:
         names = eda.parse_edas(edas)
         if not names:
@@ -268,7 +273,6 @@ class M3Service(ToolService):
                         json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
                     )
                     self._update(job, ok=job.ok + 1)
-                    self._log(job, f"OK {name}")
                 except ToolError as exc:
                     if exc.code == "session_expired":
                         self._expired("eda")
@@ -293,7 +297,9 @@ class M3Service(ToolService):
         self, kind: Literal["workspaces", "insights"], query: str = ""
     ) -> list[workspaces.Workspace]:
         tenant = check_tenant(self._config().tenant)
-        return self._guard("workspaces", lambda s: workspaces.list_items(s, tenant, kind, query))
+        items = self._guard("workspaces", lambda s: workspaces.list_items(s, tenant, kind, query))
+        self._ws_titles.update({i.id: i.title for i in items})
+        return items
 
     @action
     def ws_analyze(self, ids: list[str]) -> None:
@@ -303,16 +309,37 @@ class M3Service(ToolService):
         session = self._session("workspaces")
 
         def work(job: _Job) -> None:
-            self._update(job, status="working", total=1)
-            try:
-                data = workspaces.export_zip(session, tenant, ids)
-            except ToolError as exc:
-                if exc.code == "session_expired":
-                    self._expired("workspaces")
-                raise
-            totals, rows = workspaces.aggregate(workspaces.widgets_in_zip(data))
+            # Un export par workspace : un workspace non publié donne une archive vide, ce qui
+            # ne doit pas faire perdre les autres (le serveur n'exporte que les versions publiées).
+            self._update(job, status="working", total=len(ids))
+            occurrences: list[workspaces.Occurrence] = []
+            for i, ws_id in enumerate(ids, 1):
+                if job.cancel.is_set():
+                    self._log(job, "cancelled")
+                    break
+                label = self._ws_titles.get(ws_id, ws_id)
+                try:
+                    data = workspaces.export_zip(session, tenant, [ws_id])
+                    report: list[str] = []
+                    found = workspaces.widgets_in_zip(data, report)
+                except ToolError as exc:
+                    if exc.code == "session_expired":
+                        self._expired("workspaces")
+                        raise
+                    self._update(job, failed=job.failed + 1)
+                    self._log(job, f"ERR {label}: {exc.message}")
+                else:
+                    occurrences.extend(found)
+                    if found:
+                        self._update(job, ok=job.ok + 1)
+                    else:
+                        self._update(job, failed=job.failed + 1)
+                        detail = "; ".join(report[:3]) or f"{len(data)} bytes"
+                        self._log(job, f"0 widget {label} ({detail})")
+                self._update(job, done=i)
+            totals, rows = workspaces.aggregate(occurrences)
             self._ws_result = WsResult(totals=totals, rows=rows)
-            self._update(job, status="finished", done=1, ok=len(totals))
+            self._update(job, status="finished")
 
         self._start("ws_analyze", work)
 
@@ -326,6 +353,18 @@ class M3Service(ToolService):
             raise ToolError("nothing_to_export", "Nothing to export")
         path = self._out("widgets") / f"widgets_{datetime.now():%Y%m%d_%H%M%S}.csv"
         workspaces.write_csv(path, self._ws_result.rows)
+        return str(path)
+
+    # --- Export CSV d'un tableau ---------------------------------------------------
+
+    @action
+    def save_csv(self, name: str, header: list[str], rows: list[list[str | int]]) -> str:
+        """Écrit un tableau affiché en CSV (`;`, utf-8-sig) dans le sous-dossier csv."""
+        if not rows:
+            raise ToolError("nothing_to_export", "Nothing to export")
+        stem = eda.safe_name(name).strip() or "export"
+        path = self._out("csv") / f"{stem}_{datetime.now():%Y%m%d_%H%M%S}.csv"
+        workspaces.write_table_csv(path, header, rows)
         return str(path)
 
     # --- Code Xtend ----------------------------------------------------------------

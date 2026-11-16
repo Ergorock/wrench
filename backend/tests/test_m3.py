@@ -344,3 +344,85 @@ def test_workspace_analysis_and_csv(svc: M3Service, monkeypatch, tmp_path: Path)
     assert [t["widget_id"] for t in svc.invoke("ws_result", {})["totals"]] == ["mon", "kpi"]
     path = Path(svc.invoke("ws_export_csv", {}))
     assert path.parent == tmp_path / "out" / "widgets" and path.is_file()
+
+
+def test_zip_parsing_tolerates_bom_and_any_extension():
+    page = json.dumps(
+        {
+            "id": "1",
+            "title": "WS",
+            "dashboard": {
+                "containers": [
+                    {"nodes": [{"type": "widget", "ref": {"id": "mon"}, "data": {"title": "M"}}]}
+                ]
+            },
+        }
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("page", "﻿" + page)
+        z.writestr("blob.bin", b"\xff\xfe")
+    report: list[str] = []
+    found = workspaces.widgets_in_zip(buf.getvalue(), report)
+    assert [f[0] for f in found] == ["mon"]
+    assert any("1 widgets" in line for line in report) and any(
+        "not JSON" in line for line in report
+    )
+
+
+def test_save_csv(svc: M3Service, tmp_path: Path):
+    with pytest.raises(ToolError):
+        svc.invoke("save_csv", {"name": "x", "header": ["a"], "rows": []})
+    path = Path(
+        svc.invoke("save_csv", {"name": "My list/1", "header": ["a", "b"], "rows": [["é", 2]]})
+    )
+    assert path.parent == tmp_path / "out" / "csv" and path.name.startswith("My list_1_")
+    assert path.read_text(encoding="utf-8-sig").splitlines() == ["a;b", "é;2"]
+
+
+def test_parse_eda_list_picks_ids_and_scalar_fields():
+    payload = {
+        "content": [
+            {"shortId": "A1", "name": "First", "tags": ["x"], "n": 3},
+            {"name": "OnlyName"},
+            {"nothing": ""},
+            "junk",
+        ]
+    }
+    items = eda.parse_list(payload)
+    assert [i.id for i in items] == ["A1", "OnlyName"]
+    assert items[0].fields == {"shortId": "A1", "name": "First", "n": "3"}
+    with pytest.raises(ToolError):
+        eda.parse_list({"content": "x"})
+
+
+def test_eda_list_pages_until_the_end(svc: M3Service, monkeypatch):
+    svc._sessions["eda"] = Session("https://h", {}, {})
+    offsets = []
+
+    def fake_request(method, url, **kwargs):
+        offset = kwargs["json"]["paging"]["offset"]
+        offsets.append(offset)
+        size = eda.PAGE_SIZE if offset == 0 else 2
+        return FakeResponse({"content": [{"shortId": f"E{offset}_{i}"} for i in range(size)]})
+
+    monkeypatch.setattr(http.requests, "request", fake_request)
+    items = svc.invoke("eda_list", {})
+    assert offsets == [0, eda.PAGE_SIZE] and len(items) == eda.PAGE_SIZE + 2
+
+
+def test_workspace_analysis_exports_one_by_one_and_reports_empty_ones(svc: M3Service, monkeypatch):
+    svc.invoke("set_token", {"token": "tok"})
+    empty = io.BytesIO()
+    zipfile.ZipFile(empty, "w").close()
+
+    def fake_export(session, tenant, ids, http=None):
+        assert len(ids) == 1
+        return export_zip() if ids == ["1"] else empty.getvalue()
+
+    monkeypatch.setattr("wrench.tools.m3.service.workspaces.export_zip", fake_export)
+    svc.invoke("ws_analyze", {"ids": ["1", "2"]})
+    job = wait_idle(svc)
+    assert (job["ok"], job["failed"], job["done"], job["total"]) == (1, 1, 2, 2)
+    assert any(line.startswith("0 widget 2") for line in job["log"])
+    assert svc.invoke("ws_result", {})["totals"][0]["count"] == 3
