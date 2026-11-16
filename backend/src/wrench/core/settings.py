@@ -21,6 +21,8 @@ class SidebarSettings(BaseModel):
     category_order: list[str] = []
     tool_order: dict[str, list[str]] = {}
     favorites: list[str] = []
+    folded: list[str] = []
+    recents: list[str] = []
 
 
 class ToolSettings(BaseModel):

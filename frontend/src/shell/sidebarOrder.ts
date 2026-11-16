@@ -2,8 +2,11 @@ import type { Category, Settings, ToolManifest } from '../bridge/types'
 
 export interface SidebarModel {
   favorites: ToolManifest[]
+  recents: ToolManifest[]
   categories: { category: Category; tools: ToolManifest[] }[]
 }
+
+export const RECENTS_MAX = 3
 
 export function resolveOrder(saved: string[], known: string[]): string[] {
   const knownSet = new Set(known)
@@ -45,5 +48,21 @@ export function buildSidebar(
     .map((id) => byId.get(id))
     .filter((t): t is ToolManifest => t !== undefined)
 
-  return { favorites, categories: result }
+  const recents = sidebar.recents
+    .map((id) => byId.get(id))
+    .filter((t): t is ToolManifest => t !== undefined && !sidebar.favorites.includes(t.id))
+    .slice(0, RECENTS_MAX)
+
+  return { favorites, recents, categories: result }
+}
+
+const fold = (s: string): string => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
+/** True when every word of the query appears in the text, ignoring case and accents. */
+export function matchesQuery(text: string, query: string): boolean {
+  const haystack = fold(text)
+  return fold(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word))
 }

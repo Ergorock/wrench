@@ -56,7 +56,7 @@ function bootstrapData() {
       language: 'en',
       theme: 'light',
       autostart: false,
-      sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [] },
+      sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [], folded: [], recents: [] },
       tools: {},
       window: { x: null, y: null, width: 1100, height: 720, maximized: false },
       updates: { auto_check: true, last_check: null },

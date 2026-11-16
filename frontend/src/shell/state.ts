@@ -3,7 +3,7 @@ import { getBootstrap, saveSettings, waitForBridge } from '../bridge/client'
 import type { Bootstrap, Settings } from '../bridge/types'
 import { setLanguage } from '../i18n'
 import { applyTheme } from '../theme/theme'
-import { buildSidebar, isToolEnabled, type SidebarModel } from './sidebarOrder'
+import { buildSidebar, isToolEnabled, RECENTS_MAX, type SidebarModel } from './sidebarOrder'
 import { toastError } from './toasts'
 import { useUpdates } from './updates'
 
@@ -24,7 +24,7 @@ const EMPTY_SETTINGS: Settings = {
   language: 'en',
   theme: 'system',
   autostart: false,
-  sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [] },
+  sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [], folded: [], recents: [] },
   tools: {},
   window: { x: null, y: null, width: 1100, height: 720, maximized: false },
   updates: { auto_check: true, last_check: null },
@@ -39,7 +39,7 @@ const view = ref<string>('home')
 const sidebar = computed<SidebarModel>(() =>
   bootstrap.value
     ? buildSidebar(bootstrap.value.categories, bootstrap.value.tools, settings.value)
-    : { favorites: [], categories: [] },
+    : { favorites: [], recents: [], categories: [] },
 )
 
 /** Replaces the settings and applies language/theme when they change. */
@@ -90,9 +90,10 @@ function update(mutator: (s: Settings) => void): Promise<void> {
 
 function openTool(id: string): void {
   view.value = id
-  if (settings.value.last_tool !== id) {
+  if (settings.value.last_tool !== id || settings.value.sidebar.recents[0] !== id) {
     void update((s) => {
       s.last_tool = id
+      s.sidebar.recents = [id, ...s.sidebar.recents.filter((r) => r !== id)].slice(0, RECENTS_MAX)
     })
   }
 }

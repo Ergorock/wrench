@@ -2,6 +2,9 @@
   "app": { "name": "Wrench" },
   "common": { "close": "Fermer" },
   "nav": {
+    "search": "Rechercher un outil…",
+    "recents": "Récents",
+    "noResults": "Aucun outil trouvé",
     "favorites": "Favoris",
     "settings": "Paramètres",
     "collapse": "Réduire le menu",

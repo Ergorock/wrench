@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSidebar, isToolEnabled, resolveOrder } from '../src/shell/sidebarOrder'
+import { buildSidebar, isToolEnabled, matchesQuery, resolveOrder } from '../src/shell/sidebarOrder'
 import type { Category, Settings, SidebarSettings, ToolManifest } from '../src/bridge/types'
 
 const CATS: Category[] = [
@@ -22,7 +22,7 @@ function settings(
     language: 'fr',
     theme: 'system',
     autostart: false,
-    sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [], ...sidebar },
+    sidebar: { collapsed: false, category_order: [], tool_order: {}, favorites: [], folded: [], recents: [], ...sidebar },
     tools: {},
     window: { x: null, y: null, width: 1100, height: 720, maximized: false },
     updates: { auto_check: true, last_check: null },
@@ -68,5 +68,21 @@ describe('sidebarOrder', () => {
     const m = buildSidebar(CATS, [tool('a', 'system'), tool('b', 'system'), tool('c', 'system')],
       settings({ sidebar: { tool_order: { system: ['c', 'gone', 'a'] } } }))
     expect(m.categories[0].tools.map((t) => t.id)).toEqual(['c', 'a', 'b'])
+  })
+})
+
+describe('matchesQuery', () => {
+  it('ignores case and accents and requires every word', () => {
+    expect(matchesQuery('Dépôts Git Développement', 'depots dev')).toBe(true)
+    expect(matchesQuery('Dépôts Git', 'git xml')).toBe(false)
+    expect(matchesQuery('Dépôts Git', '  ')).toBe(true)
+  })
+})
+
+describe('recents', () => {
+  it('lists active recent tools that are not favorites, at most three', () => {
+    const tools = ['a', 'b', 'c', 'd', 'e'].map((id) => tool(id, 'system'))
+    const m = buildSidebar(CATS, tools, settings({ sidebar: { favorites: ['b'], recents: ['b', 'a', 'x', 'c', 'd', 'e'] } }))
+    expect(m.recents.map((t) => t.id)).toEqual(['a', 'c', 'd'])
   })
 })

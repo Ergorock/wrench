@@ -6,6 +6,8 @@ export interface SidebarSettings {
   category_order: string[]
   tool_order: Record<string, string[]>
   favorites: string[]
+  folded: string[]
+  recents: string[]
 }
 
 export interface ToolSettings {

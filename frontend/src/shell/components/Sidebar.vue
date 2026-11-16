@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings, Star } from '@lucide/vue'
+import {
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  GripVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  Settings,
+  Star,
+} from '@lucide/vue'
 import type { ToolManifest } from '../../bridge/types'
-import type { SidebarModel } from '../sidebarOrder'
+import { matchesQuery, type SidebarModel } from '../sidebarOrder'
 import { lucideIcon } from '../icons'
 import { useShell } from '../state'
 import ContextMenu from './ContextMenu.vue'
@@ -13,44 +23,71 @@ import SidebarItem from './SidebarItem.vue'
 type CategoryEntry = SidebarModel['categories'][number]
 
 const { t } = useI18n()
-const { settings, sidebar, view, update, openTool } = useShell()
+const { settings, sidebar, view, update, openTool, toggleFavorite } = useShell()
 
 const collapsed = computed(() => settings.value.sidebar.collapsed)
-const folded = reactive(new Set<string>()) // local, not persisted
+const folded = computed(() => new Set(settings.value.sidebar.folded))
 const menu = ref<{ x: number; y: number; toolId: string } | null>(null)
+const nav = ref<HTMLElement | null>(null)
+const searchInput = ref<HTMLInputElement | null>(null)
+const query = ref('')
+const selected = ref(0)
 
 const toolName = (id: string) => t(`tools.${id}.name`)
+const isFavorite = (id: string) => settings.value.sidebar.favorites.includes(id)
+const starLabel = (id: string) => t(isFavorite(id) ? 'nav.unpin' : 'nav.pin')
+/** Folding only applies to the full menu: the icon rail always shows every tool. */
+const isFolded = (catId: string) => !collapsed.value && folded.value.has(catId)
+
+const results = computed(() =>
+  query.value.trim() === ''
+    ? []
+    : sidebar.value.categories.flatMap((c) =>
+        c.tools.filter((tool) =>
+          matchesQuery(`${toolName(tool.id)} ${t(`categories.${c.category.id}`)}`, query.value),
+        ),
+      ),
+)
+watch(query, () => {
+  selected.value = 0
+})
 
 /** Shown ids first, then the saved ids that are not shown (disabled tools, empty categories). */
 function merge(shown: string[], saved: string[]): string[] {
   return [...shown, ...saved.filter((id) => !shown.includes(id))]
 }
 
-function onFavorites(list: ToolManifest[]): void {
-  void update((s) => {
-    s.sidebar.favorites = merge(list.map((x) => x.id), s.sidebar.favorites)
+function setFavorites(ids: string[]): Promise<void> {
+  return update((s) => {
+    s.sidebar.favorites = merge(ids, s.sidebar.favorites)
   })
 }
 
-function onCategories(list: CategoryEntry[]): void {
+function setCategories(ids: string[]): void {
   void update((s) => {
-    s.sidebar.category_order = merge(list.map((c) => c.category.id), s.sidebar.category_order)
+    s.sidebar.category_order = merge(ids, s.sidebar.category_order)
   })
 }
 
-function onTools(cat: string, list: ToolManifest[]): void {
-  void update((s) => {
-    s.sidebar.tool_order[cat] = merge(list.map((x) => x.id), s.sidebar.tool_order[cat] ?? [])
+function setTools(cat: string, ids: string[]): Promise<void> {
+  return update((s) => {
+    s.sidebar.tool_order[cat] = merge(ids, s.sidebar.tool_order[cat] ?? [])
   })
 }
+
+const ids = (list: ToolManifest[]) => list.map((x) => x.id)
 
 function toggleFold(id: string): void {
-  if (folded.has(id)) folded.delete(id)
-  else folded.add(id)
+  void update((s) => {
+    const list = s.sidebar.folded
+    const i = list.indexOf(id)
+    if (i >= 0) list.splice(i, 1)
+    else list.push(id)
+  })
 }
 
-function toggleCollapsed(): void {
-  void update((s) => {
+function toggleCollapsed(): Promise<void> {
+  return update((s) => {
     s.sidebar.collapsed = !s.sidebar.collapsed
   })
 }
@@ -62,88 +99,246 @@ function showSettings(): void {
 function openMenu(e: MouseEvent, toolId: string): void {
   menu.value = { x: e.clientX, y: e.clientY, toolId }
 }
+
+// --- Search -------------------------------------------------------------
+
+async function focusSearch(): Promise<void> {
+  if (collapsed.value) {
+    await toggleCollapsed()
+    await nextTick()
+  }
+  searchInput.value?.focus()
+  searchInput.value?.select()
+}
+
+function clearSearch(): void {
+  query.value = ''
+}
+
+function openResult(tool: ToolManifest): void {
+  openTool(tool.id)
+  clearSearch()
+}
+
+function onSearchKey(e: KeyboardEvent): void {
+  const last = results.value.length - 1
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (query.value.trim() === '') navButtons()[0]?.focus()
+    else selected.value = Math.min(selected.value + 1, last)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    selected.value = Math.max(selected.value - 1, 0)
+  } else if (e.key === 'Enter') {
+    const hit = results.value[selected.value]
+    if (hit) openResult(hit)
+  } else if (e.key === 'Escape') {
+    clearSearch()
+    searchInput.value?.blur()
+  }
+}
+
+function onGlobalKey(e: KeyboardEvent): void {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    void focusSearch()
+  }
+}
+onMounted(() => window.addEventListener('keydown', onGlobalKey))
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))
+
+// --- Keyboard navigation in the list ------------------------------------
+
+function navButtons(): HTMLElement[] {
+  return Array.from(nav.value?.querySelectorAll<HTMLElement>('.item, button.group-title') ?? [])
+}
+
+/** Alt+Up / Alt+Down: moves a tool one place within its list (favorites or its category). */
+function moveTool(row: HTMLElement, delta: number): void {
+  const { tool, list } = row.dataset
+  if (!tool || !list) return
+  const order = list === 'fav'
+    ? ids(sidebar.value.favorites)
+    : ids(sidebar.value.categories.find((c) => `cat:${c.category.id}` === list)?.tools ?? [])
+  const from = order.indexOf(tool)
+  const to = from + delta
+  if (from < 0 || to < 0 || to >= order.length) return
+  ;[order[from], order[to]] = [order[to], order[from]]
+  const done = list === 'fav' ? setFavorites(order) : setTools(list.slice(4), order)
+  void done.then(() => nextTick()).then(() => {
+    nav.value
+      ?.querySelector<HTMLElement>(`[data-list="${list}"][data-tool="${tool}"] .item`)
+      ?.focus()
+  })
+}
+
+function onNavKey(e: KeyboardEvent): void {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+  const target = e.target as HTMLElement
+  const delta = e.key === 'ArrowDown' ? 1 : -1
+  e.preventDefault()
+  if (e.altKey) {
+    const row = target.closest<HTMLElement>('[data-tool]')
+    if (row) moveTool(row, delta)
+    return
+  }
+  const buttons = navButtons()
+  const at = buttons.indexOf(target.closest('.item, button.group-title') as HTMLElement)
+  if (at < 0) return
+  if (at + delta < 0) searchInput.value?.focus()
+  else buttons[Math.min(at + delta, buttons.length - 1)]?.focus()
+}
 </script>
 
 <template>
   <aside class="sidebar" :class="{ collapsed }">
-    <nav class="scroll">
-      <section v-if="sidebar.favorites.length > 0" class="group">
-        <div class="group-title" :title="collapsed ? t('nav.favorites') : undefined">
-          <Star :size="16" class="muted-icon" />
-          <span v-if="!collapsed">{{ t('nav.favorites') }}</span>
-        </div>
-        <draggable
-          :model-value="sidebar.favorites"
-          item-key="id"
-          group="favorites"
-          tag="ul"
-          class="list"
-          @update:model-value="onFavorites"
-        >
-          <template #item="{ element }">
-            <li>
+    <div class="top">
+      <label v-if="!collapsed" class="search">
+        <Search :size="16" class="search-icon" />
+        <input
+          ref="searchInput"
+          v-model="query"
+          type="text"
+          :placeholder="t('nav.search')"
+          :aria-label="t('nav.search')"
+          autocomplete="off"
+          spellcheck="false"
+          @keydown="onSearchKey"
+        />
+        <kbd v-if="query === ''" class="hint">Ctrl K</kbd>
+      </label>
+      <SidebarItem v-else :icon="Search" :label="t('nav.search')" collapsed @click="focusSearch" />
+    </div>
+
+    <nav ref="nav" class="scroll" @keydown="onNavKey">
+      <template v-if="query.trim() !== ''">
+        <ul v-if="results.length > 0" class="list">
+          <li v-for="(tool, i) in results" :key="tool.id">
+            <SidebarItem
+              :icon="lucideIcon(tool.icon)"
+              :label="toolName(tool.id)"
+              :collapsed="false"
+              :active="view === tool.id"
+              :highlighted="i === selected"
+              @click="openResult(tool)"
+            />
+          </li>
+        </ul>
+        <p v-else class="empty">{{ t('nav.noResults') }}</p>
+      </template>
+
+      <template v-else>
+        <section v-if="sidebar.favorites.length > 0" class="group">
+          <div v-if="!collapsed" class="group-title">
+            <Star :size="16" class="muted-icon" />
+            <span>{{ t('nav.favorites') }}</span>
+          </div>
+          <draggable
+            :model-value="sidebar.favorites"
+            item-key="id"
+            group="favorites"
+            tag="ul"
+            class="list"
+            @update:model-value="(list: ToolManifest[]) => void setFavorites(ids(list))"
+          >
+            <template #item="{ element }">
+              <li>
+                <SidebarItem
+                  data-list="fav"
+                  :data-tool="element.id"
+                  :icon="lucideIcon(element.icon)"
+                  :label="toolName(element.id)"
+                  :collapsed="collapsed"
+                  :active="view === element.id"
+                  :star-label="starLabel(element.id)"
+                  :starred="true"
+                  @click="openTool(element.id)"
+                  @star="toggleFavorite(element.id)"
+                  @contextmenu.prevent="openMenu($event, element.id)"
+                />
+              </li>
+            </template>
+          </draggable>
+        </section>
+
+        <section v-if="sidebar.recents.length > 0" class="group">
+          <div v-if="!collapsed" class="group-title">
+            <Clock :size="16" class="muted-icon" />
+            <span>{{ t('nav.recents') }}</span>
+          </div>
+          <ul class="list">
+            <li v-for="tool in sidebar.recents" :key="tool.id">
               <SidebarItem
-                :icon="lucideIcon(element.icon)"
-                :label="toolName(element.id)"
+                data-list="recent"
+                :data-tool="tool.id"
+                :icon="lucideIcon(tool.icon)"
+                :label="toolName(tool.id)"
                 :collapsed="collapsed"
-                :active="view === element.id"
-                @click="openTool(element.id)"
-                @contextmenu.prevent="openMenu($event, element.id)"
+                :active="view === tool.id"
+                :star-label="starLabel(tool.id)"
+                :starred="false"
+                @click="openTool(tool.id)"
+                @star="toggleFavorite(tool.id)"
+                @contextmenu.prevent="openMenu($event, tool.id)"
               />
             </li>
+          </ul>
+        </section>
+
+        <draggable
+          :model-value="sidebar.categories"
+          :item-key="(c: CategoryEntry) => c.category.id"
+          group="categories"
+          handle=".grip"
+          tag="div"
+          @update:model-value="(list: CategoryEntry[]) => setCategories(list.map((c) => c.category.id))"
+        >
+          <template #item="{ element: cat }">
+            <section class="group">
+              <div v-if="!collapsed && cat.tools.length > 1" class="title-row">
+                <span class="grip" aria-hidden="true"><GripVertical :size="12" /></span>
+                <button
+                  type="button"
+                  class="group-title"
+                  :aria-expanded="!isFolded(cat.category.id)"
+                  @click="toggleFold(cat.category.id)"
+                >
+                  <component :is="lucideIcon(cat.category.icon)" :size="16" class="muted-icon" />
+                  <span class="title-label">{{ t(`categories.${cat.category.id}`) }}</span>
+                  <component :is="isFolded(cat.category.id) ? ChevronRight : ChevronDown" :size="14" />
+                </button>
+              </div>
+              <draggable
+                v-if="!isFolded(cat.category.id)"
+                :model-value="cat.tools"
+                item-key="id"
+                :group="`tools-${cat.category.id}`"
+                tag="ul"
+                class="list"
+                @update:model-value="(list: ToolManifest[]) => void setTools(cat.category.id, ids(list))"
+              >
+                <template #item="{ element }">
+                  <li>
+                    <SidebarItem
+                      :data-list="`cat:${cat.category.id}`"
+                      :data-tool="element.id"
+                      :icon="lucideIcon(element.icon)"
+                      :label="toolName(element.id)"
+                      :collapsed="collapsed"
+                      :active="view === element.id"
+                      :star-label="starLabel(element.id)"
+                      :starred="isFavorite(element.id)"
+                      @click="openTool(element.id)"
+                      @star="toggleFavorite(element.id)"
+                      @contextmenu.prevent="openMenu($event, element.id)"
+                    />
+                  </li>
+                </template>
+              </draggable>
+            </section>
           </template>
         </draggable>
-      </section>
-
-      <draggable
-        :model-value="sidebar.categories"
-        :item-key="(c: CategoryEntry) => c.category.id"
-        group="categories"
-        handle=".group-title"
-        tag="div"
-        @update:model-value="onCategories"
-      >
-        <template #item="{ element: cat }">
-          <section class="group">
-            <button
-              type="button"
-              class="group-title"
-              :title="collapsed ? t(`categories.${cat.category.id}`) : undefined"
-              :aria-label="collapsed ? t(`categories.${cat.category.id}`) : undefined"
-              :aria-expanded="!folded.has(cat.category.id)"
-              @click="toggleFold(cat.category.id)"
-            >
-              <component :is="lucideIcon(cat.category.icon)" :size="16" class="muted-icon" />
-              <template v-if="!collapsed">
-                <span class="title-label">{{ t(`categories.${cat.category.id}`) }}</span>
-                <component :is="folded.has(cat.category.id) ? ChevronRight : ChevronDown" :size="14" />
-              </template>
-            </button>
-            <draggable
-              v-show="!folded.has(cat.category.id)"
-              :model-value="cat.tools"
-              item-key="id"
-              :group="`tools-${cat.category.id}`"
-              tag="ul"
-              class="list"
-              @update:model-value="(list: ToolManifest[]) => onTools(cat.category.id, list)"
-            >
-              <template #item="{ element }">
-                <li>
-                  <SidebarItem
-                    :icon="lucideIcon(element.icon)"
-                    :label="toolName(element.id)"
-                    :collapsed="collapsed"
-                    :active="view === element.id"
-                    @click="openTool(element.id)"
-                    @contextmenu.prevent="openMenu($event, element.id)"
-                  />
-                </li>
-              </template>
-            </draggable>
-          </section>
-        </template>
-      </draggable>
+      </template>
     </nav>
 
     <div class="bottom">
@@ -183,6 +378,45 @@ function openMenu(e: MouseEvent, toolId: string): void {
 .sidebar.collapsed {
   width: 56px;
 }
+.top {
+  padding-bottom: 8px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+.search:focus-within {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.search-icon {
+  flex: none;
+}
+.hint {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+}
 .scroll {
   flex: 1;
   overflow-x: hidden;
@@ -190,6 +424,28 @@ function openMenu(e: MouseEvent, toolId: string): void {
 }
 .group {
   margin-bottom: 12px;
+}
+.sidebar.collapsed .group + .group {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.title-row {
+  position: relative;
+}
+.grip {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 11px;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+}
+.title-row:hover .grip {
+  opacity: 1;
 }
 .group-title {
   display: flex;
@@ -229,6 +485,10 @@ button.group-title:hover {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.empty {
+  margin: 8px 11px;
+  color: var(--text-muted);
 }
 .bottom {
   display: flex;
