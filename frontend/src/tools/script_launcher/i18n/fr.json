@@ -3,7 +3,7 @@
   "description": "Lancer, en un clic, des programmes et des scripts que vous avez enregistrés.",
   "intro": "Seules les commandes que vous enregistrez peuvent être lancées. Aucun shell : les arguments sont passés tels quels, un par ligne. Délai maximum : 60 secondes.",
   "add": "Nouvelle commande",
-  "name": "Nom",
+  "nameLabel": "Nom",
   "program": "Programme",
   "programHint": "Chemin complet d’un .exe, ou nom d’un .exe présent dans le PATH. Les fichiers .bat, .cmd et .ps1 ne sont pas lancés directement.",
   "browse": "Parcourir…",

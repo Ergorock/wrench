@@ -3,7 +3,7 @@
   "description": "Run, with one click, the programs and scripts you have saved.",
   "intro": "Only the commands you save can be run. No shell: arguments are passed as they are, one per line. Maximum run time: 60 seconds.",
   "add": "New command",
-  "name": "Name",
+  "nameLabel": "Name",
   "program": "Program",
   "programHint": "Full path to an .exe, or the name of an .exe found on PATH. .bat, .cmd and .ps1 files are not run directly.",
   "browse": "Browse…",

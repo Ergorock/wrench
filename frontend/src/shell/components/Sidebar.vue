@@ -5,13 +5,11 @@ import draggable from 'vuedraggable'
 import {
   ChevronDown,
   ChevronRight,
-  Clock,
   GripVertical,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings,
-  Star,
 } from '@lucide/vue'
 import type { ToolManifest } from '../../bridge/types'
 import { matchesQuery, type SidebarModel } from '../sidebarOrder'
@@ -32,6 +30,9 @@ const nav = ref<HTMLElement | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 const query = ref('')
 const selected = ref(0)
+
+/** The open tool is already highlighted in its category, so it is left out of the recents. */
+const recents = computed(() => sidebar.value.recents.filter((x) => x.id !== view.value))
 
 const toolName = (id: string) => t(`tools.${id}.name`)
 const isFavorite = (id: string) => settings.value.sidebar.favorites.includes(id)
@@ -230,7 +231,6 @@ function onNavKey(e: KeyboardEvent): void {
       <template v-else>
         <section v-if="sidebar.favorites.length > 0" class="group">
           <div v-if="!collapsed" class="group-title">
-            <Star :size="16" class="muted-icon" />
             <span>{{ t('nav.favorites') }}</span>
           </div>
           <draggable
@@ -261,13 +261,12 @@ function onNavKey(e: KeyboardEvent): void {
           </draggable>
         </section>
 
-        <section v-if="sidebar.recents.length > 0" class="group">
+        <section v-if="recents.length > 0" class="group">
           <div v-if="!collapsed" class="group-title">
-            <Clock :size="16" class="muted-icon" />
             <span>{{ t('nav.recents') }}</span>
           </div>
           <ul class="list">
-            <li v-for="tool in sidebar.recents" :key="tool.id">
+            <li v-for="tool in recents" :key="tool.id">
               <SidebarItem
                 data-list="recent"
                 :data-tool="tool.id"
@@ -295,7 +294,7 @@ function onNavKey(e: KeyboardEvent): void {
         >
           <template #item="{ element: cat }">
             <section class="group">
-              <div v-if="!collapsed && cat.tools.length > 1" class="title-row">
+              <div v-if="!collapsed" class="title-row">
                 <span class="grip" aria-hidden="true"><GripVertical :size="12" /></span>
                 <button
                   type="button"
@@ -303,7 +302,6 @@ function onNavKey(e: KeyboardEvent): void {
                   :aria-expanded="!isFolded(cat.category.id)"
                   @click="toggleFold(cat.category.id)"
                 >
-                  <component :is="lucideIcon(cat.category.icon)" :size="16" class="muted-icon" />
                   <span class="title-label">{{ t(`categories.${cat.category.id}`) }}</span>
                   <component :is="isFolded(cat.category.id) ? ChevronRight : ChevronDown" :size="14" />
                 </button>
@@ -423,7 +421,7 @@ function onNavKey(e: KeyboardEvent): void {
   overflow-y: auto;
 }
 .group {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .sidebar.collapsed .group + .group {
   padding-top: 8px;
@@ -450,10 +448,10 @@ function onNavKey(e: KeyboardEvent): void {
 .group-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   height: 28px;
-  padding: 0 11px;
+  padding: 0 10px 0 14px;
   border: none;
   border-radius: var(--radius);
   background: transparent;
@@ -475,13 +473,13 @@ button.group-title:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.muted-icon {
-  flex: none;
-}
 .list {
   list-style: none;
   margin: 2px 0 0;
-  padding: 0;
+  padding: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   gap: 2px;

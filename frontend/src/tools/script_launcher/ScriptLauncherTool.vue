@@ -115,7 +115,7 @@ onMounted(() => {
 
     <form v-if="formOpen" class="panel form" @submit.prevent="save">
       <label class="field">
-        <span>{{ t(`${PREFIX}name`) }}</span>
+        <span>{{ t(`${PREFIX}nameLabel`) }}</span>
         <input v-model="form.name" maxlength="60" required />
       </label>
       <label class="field">

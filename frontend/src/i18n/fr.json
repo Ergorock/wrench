@@ -2,7 +2,7 @@
   "app": { "name": "Wrench" },
   "common": { "close": "Fermer" },
   "nav": {
-    "search": "Rechercher un outil…",
+    "search": "Rechercher…",
     "recents": "Récents",
     "noResults": "Aucun outil trouvé",
     "favorites": "Favoris",

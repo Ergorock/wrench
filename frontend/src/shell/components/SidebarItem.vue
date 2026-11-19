@@ -91,6 +91,9 @@ defineEmits<{ star: [] }>()
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+.row:hover .label,
+.row.starred .label {
   padding-right: 24px;
 }
 .star {
