@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Folder, FolderOpen } from '@lucide/vue'
+import { ChevronDown, ChevronRight, Folder, FolderOpen } from '@lucide/vue'
 import { useTool } from '../../bridge/useTool'
 import type { FolderEntry } from './types'
 
-const props = defineProps<{ folder: FolderEntry }>()
+const props = defineProps<{
+  folder: FolderEntry
+  /** One line instead of a card (list and tree views). */
+  compact?: boolean
+  /** Tree view only: the folder is expandable, and this tells whether it is expanded. */
+  expanded?: boolean
+}>()
 const emit = defineEmits<{ open: [] }>()
 
 const { t } = useI18n()
@@ -21,7 +27,18 @@ async function openInExplorer(): Promise<void> {
 
 <template>
   <div class="folder-wrap">
-    <button type="button" class="folder-card" :data-folder="folder.rel_path" @click="emit('open')">
+    <button
+      type="button"
+      class="folder-card"
+      :class="{ compact }"
+      :data-folder="folder.rel_path"
+      :aria-expanded="expanded"
+      @click="emit('open')"
+    >
+      <template v-if="expanded !== undefined">
+        <ChevronDown v-if="expanded" :size="14" aria-hidden="true" />
+        <ChevronRight v-else :size="14" aria-hidden="true" />
+      </template>
       <Folder :size="20" aria-hidden="true" />
       <span class="name">{{ folder.name }}</span>
       <span class="count">{{ t('tools.projects.folder.count', { n: folder.project_count }, folder.project_count) }}</span>
@@ -61,6 +78,12 @@ async function openInExplorer(): Promise<void> {
 .folder-card:hover {
   background: var(--hover);
 }
+.folder-card.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
 .open-folder {
   position: absolute;
   top: 8px;
@@ -72,6 +95,10 @@ async function openInExplorer(): Promise<void> {
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
+}
+.folder-card.compact + .open-folder {
+  top: 50%;
+  transform: translateY(-50%);
 }
 .open-folder:hover {
   background: var(--hover);

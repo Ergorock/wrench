@@ -29,6 +29,28 @@ export function breadcrumb(tree: FolderEntry, relPath: string): { name: string; 
   return crumbs
 }
 
+export type ViewMode = 'cards' | 'list' | 'tree'
+export const VIEW_MODES: ViewMode[] = ['cards', 'list', 'tree']
+
+/** The stored view mode, cards when absent or unknown. */
+export const parseViewMode = (raw: string | null): ViewMode => VIEW_MODES.find((m) => m === raw) ?? 'cards'
+
+export type TreeRow =
+  | { kind: 'folder'; folder: FolderEntry; depth: number; expanded: boolean }
+  | { kind: 'project'; project: ProjectEntry; depth: number }
+
+/** The rows of the tree view: every folder then every project, depth-first, children of expanded folders only. */
+export function treeRows(folder: FolderEntry, expanded: ReadonlySet<string>, depth = 0): TreeRow[] {
+  const rows: TreeRow[] = []
+  for (const f of byName(folder.folders)) {
+    const open = expanded.has(f.rel_path)
+    rows.push({ kind: 'folder', folder: f, depth, expanded: open })
+    if (open) rows.push(...treeRows(f, expanded, depth + 1))
+  }
+  for (const p of byName(folder.projects)) rows.push({ kind: 'project', project: p, depth })
+  return rows
+}
+
 /** Every folder of the inventory, the root first then the others in tree order, by relative path. */
 export function folderOptions(tree: FolderEntry): { label: string; relPath: string }[] {
   const walk = (f: FolderEntry): FolderEntry[] => byName(f.folders).flatMap((c) => [c, ...walk(c)])

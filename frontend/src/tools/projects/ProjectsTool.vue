@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, FolderPlus, LoaderCircle, Plus, RefreshCw, Settings } from '@lucide/vue'
+import { ChevronRight, FolderPlus, LayoutGrid, List, ListTree, LoaderCircle, Plus, RefreshCw, Settings } from '@lucide/vue'
 import { BridgeError, pickFolder, toolCall } from '../../bridge/client'
 import { useTool } from '../../bridge/useTool'
 import { toastError } from '../../shell/toasts'
@@ -11,11 +11,32 @@ import FolderCard from './FolderCard.vue'
 import NewProjectDialog from './NewProjectDialog.vue'
 import ProjectCard from './ProjectCard.vue'
 import ProjectPanel from './ProjectPanel.vue'
-import { breadcrumb, byName, findFolder, findProject, needsTemplateConfirm, searchProjects } from './logic'
+import {
+  breadcrumb,
+  byName,
+  findFolder,
+  findProject,
+  needsTemplateConfirm,
+  parseViewMode,
+  searchProjects,
+  treeRows,
+  VIEW_MODES,
+  type ViewMode,
+} from './logic'
 import type { Config, EditorView, ProjectEntry, State } from './types'
 
 const PREFIX = 'tools.projects.'
 const POLL_MS = 1000
+const VIEW_KEY = 'wrench.projects.view'
+const VIEW_ICONS = { cards: LayoutGrid, list: List, tree: ListTree }
+
+function storedViewMode(): ViewMode {
+  try {
+    return parseViewMode(localStorage.getItem(VIEW_KEY))
+  } catch {
+    return 'cards'
+  }
+}
 
 const { t } = useI18n()
 const tool = useTool('projects')
@@ -25,6 +46,8 @@ const state = ref<State | null>(null)
 const editors = ref<EditorView[]>([])
 const relPath = ref('')
 const query = ref('')
+const viewMode = ref<ViewMode>(storedViewMode())
+const expanded = ref<Set<string>>(new Set())
 const selected = ref<string | null>(null)
 // A selected project that vanished after a rescan stays selected, shown as missing.
 const selectedProject = computed<{ project: ProjectEntry; missing: boolean } | null>(() => {
@@ -52,7 +75,15 @@ const projects = computed(() => {
   if (!tree.value) return []
   return searching.value ? searchProjects(tree.value, query.value) : byName(current.value?.projects ?? [])
 })
-const isEmpty = computed(() => folders.value.length === 0 && projects.value.length === 0)
+// The tree view shows the whole inventory from the root; a search flattens it like the other views.
+const treeView = computed(() => viewMode.value === 'tree' && !searching.value)
+const rows = computed(() => (treeView.value && tree.value ? treeRows(tree.value, expanded.value) : []))
+const shownProjects = computed(() =>
+  treeView.value ? rows.value.flatMap((r) => (r.kind === 'project' ? [r.project] : [])) : projects.value,
+)
+const isEmpty = computed(() =>
+  treeView.value ? rows.value.length === 0 : folders.value.length === 0 && projects.value.length === 0,
+)
 const busy = computed(
   () =>
     !!state.value &&
@@ -90,11 +121,24 @@ async function act(action: string, payload: object = {}): Promise<void> {
 // The git state of the displayed projects is read on demand, after each change of the grid
 // (and once a scan has ended: it clears the git cache).
 const loadKey = computed(() =>
-  state.value?.scanning ? '' : projects.value.map((p) => p.path).join('\n'),
+  state.value?.scanning ? '' : shownProjects.value.map((p) => p.path).join('\n'),
 )
 watch(loadKey, (key) => {
-  if (key) void act('load_status', { paths: projects.value.map((p) => p.path) })
+  if (key) void act('load_status', { paths: shownProjects.value.map((p) => p.path) })
 })
+watch(viewMode, (mode) => {
+  try {
+    localStorage.setItem(VIEW_KEY, mode)
+  } catch {
+    // Storage unavailable: the choice just lasts until the tool is closed.
+  }
+})
+
+function toggleFolder(relPath: string): void {
+  const next = new Set(expanded.value)
+  if (!next.delete(relPath)) next.add(relPath)
+  expanded.value = next
+}
 
 async function saveConfig(root: string | null, templatesDir: string | null, maxDepth: number): Promise<void> {
   try {
@@ -220,13 +264,28 @@ onUnmounted(() => {
       <template v-else>
         <div class="toolbar">
           <nav class="crumbs" :aria-label="t(`${PREFIX}breadcrumb`)">
-            <template v-for="(c, i) in crumbs" :key="c.relPath">
+            <template v-for="(c, i) in treeView ? [] : crumbs" :key="c.relPath">
               <ChevronRight v-if="i > 0" :size="14" aria-hidden="true" />
               <button type="button" class="crumb" :disabled="i === crumbs.length - 1" @click="enter(c.relPath)">
                 {{ c.name }}
               </button>
             </template>
           </nav>
+          <div class="views" role="group" :aria-label="t(`${PREFIX}view.label`)">
+            <button
+              v-for="m in VIEW_MODES"
+              :key="m"
+              type="button"
+              class="view"
+              :class="{ active: viewMode === m }"
+              :aria-pressed="viewMode === m"
+              :title="t(`${PREFIX}view.${m}`)"
+              :aria-label="t(`${PREFIX}view.${m}`)"
+              @click="viewMode = m"
+            >
+              <component :is="VIEW_ICONS[m]" :size="15" aria-hidden="true" />
+            </button>
+          </div>
           <input
             v-model="query"
             type="search"
@@ -260,11 +319,40 @@ onUnmounted(() => {
             <p v-else-if="isEmpty" class="empty">
               {{ t(`${PREFIX}empty.${searching ? 'noMatch' : 'emptyFolder'}`) }}
             </p>
-            <div v-else class="grid">
-              <FolderCard v-for="f in folders" :key="f.rel_path" :folder="f" @open="enter(f.rel_path)" />
+            <div v-else-if="treeView" class="list">
+              <div v-for="r in rows" :key="r.kind === 'folder' ? `f:${r.folder.rel_path}` : `p:${r.project.path}`" :style="{ paddingLeft: `${r.depth * 20}px` }">
+                <FolderCard
+                  v-if="r.kind === 'folder'"
+                  compact
+                  :folder="r.folder"
+                  :expanded="r.expanded"
+                  @open="toggleFolder(r.folder.rel_path)"
+                />
+                <ProjectCard
+                  v-else
+                  compact
+                  :project="r.project"
+                  :git="state?.git[r.project.path]"
+                  :editors="editors"
+                  :selected="selected === r.project.path"
+                  :show-path="false"
+                  @select="selected = r.project.path"
+                  @open="(editorId) => requestOpen(r.project, editorId)"
+                />
+              </div>
+            </div>
+            <div v-else :class="viewMode === 'list' ? 'list' : 'grid'">
+              <FolderCard
+                v-for="f in folders"
+                :key="f.rel_path"
+                :compact="viewMode === 'list'"
+                :folder="f"
+                @open="enter(f.rel_path)"
+              />
               <ProjectCard
                 v-for="p in projects"
                 :key="p.path"
+                :compact="viewMode === 'list'"
                 :project="p"
                 :git="state?.git[p.path]"
                 :editors="editors"
@@ -381,6 +469,17 @@ button.primary {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.views {
+  display: inline-flex;
+}
+.views .view.active {
+  background: var(--active);
 }
 .empty {
   color: var(--text-muted);

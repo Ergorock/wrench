@@ -133,6 +133,7 @@ afterEach(() => {
   host?.remove()
   delete (window as unknown as { pywebview?: unknown }).pywebview
   toasts.value = []
+  localStorage.clear()
 })
 
 describe('ProjectsTool', () => {
@@ -176,6 +177,35 @@ describe('ProjectsTool', () => {
     ;[...host.querySelectorAll('nav button')].find((b) => b.textContent?.includes('Dev'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await settle()
     expect(host.textContent).toContain('Alpha')
+  })
+
+  it('la vue Arborescence déplie les dossiers sur place et mémorise le mode', async () => {
+    await mountTool()
+    ;(host.querySelector('button[aria-label="Tree"]') as HTMLButtonElement).click()
+    await settle()
+    expect(localStorage.getItem('wrench.projects.view')).toBe('tree')
+    expect(host.textContent).toContain('Alpha')
+    expect(host.textContent).not.toContain('Génération aspx')
+    button('M3')?.click()
+    await settle()
+    expect(host.textContent).toContain('Génération aspx')
+    expect(host.textContent).toContain('Alpha')
+    expect(calls.filter((c) => c.action === 'load_status').pop()?.payload?.paths).toContain('C:\\Dev\\M3\\Génération aspx')
+    app?.unmount()
+    host.remove()
+    await mountTool()
+    expect(host.querySelector('button[aria-label="Tree"]')?.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('la vue Liste garde la navigation par dossier', async () => {
+    await mountTool()
+    ;(host.querySelector('button[aria-label="List"]') as HTMLButtonElement).click()
+    await settle()
+    expect(host.querySelector('.list')).not.toBeNull()
+    button('M3')?.click()
+    await settle()
+    expect(host.textContent).toContain('Génération aspx')
+    expect(host.textContent).not.toContain('Alpha')
   })
 
   it('l’icône VS Code appelle open_in ; un éditeur introuvable est grisé', async () => {

@@ -9,9 +9,11 @@ import {
   isRemoteUrl,
   needsTemplateConfirm,
   normalize,
+  parseViewMode,
   requirementIcon,
   requirementLabelKey,
   searchProjects,
+  treeRows,
 } from '../src/tools/projects/logic'
 import type { FolderEntry, GitView, ProjectEntry } from '../src/tools/projects/types'
 import enTool from '../src/tools/projects/i18n/en.json'
@@ -67,6 +69,28 @@ describe('projects logic', () => {
       { name: 'Liste', relPath: 'M3\\Liste' },
     ])
     expect(breadcrumb(tree, '')).toEqual([{ name: 'Dev', relPath: '' }])
+  })
+
+  it('parseViewMode : valeur connue, inconnue ou absente', () => {
+    expect(parseViewMode('tree')).toBe('tree')
+    expect(parseViewMode('list')).toBe('list')
+    expect(parseViewMode('nope')).toBe('cards')
+    expect(parseViewMode(null)).toBe('cards')
+  })
+
+  it('treeRows : dossiers repliés par défaut, enfants des dossiers dépliés, dossiers avant projets', () => {
+    expect(treeRows(tree, new Set()).map((r) => [r.kind, r.depth])).toEqual([
+      ['folder', 0],
+      ['project', 0],
+    ])
+    const rows = treeRows(tree, new Set(['M3', 'M3\\Liste']))
+    expect(rows.map((r) => [r.kind, r.kind === 'folder' ? r.folder.name : r.project.name, r.depth])).toEqual([
+      ['folder', 'M3', 0],
+      ['folder', 'Liste', 1],
+      ['project', 'Génération aspx', 2],
+      ['project', 'zeta', 1],
+      ['project', 'Alpha', 0],
+    ])
   })
 
   it('needsTemplateConfirm suit is_template', () => {

@@ -15,6 +15,8 @@ const props = defineProps<{
   selected: boolean
   /** Shown under the name: the relative path, in search results. */
   showPath: boolean
+  /** One line instead of a card (list and tree views). */
+  compact?: boolean
 }>()
 const emit = defineEmits<{ select: []; open: [editorId: string] }>()
 
@@ -29,7 +31,7 @@ const editorTitle = (e: EditorView): string =>
 </script>
 
 <template>
-  <div class="project-card" :class="{ selected }" :data-project="project.path" @click="emit('select')">
+  <div class="project-card" :class="{ selected, compact }" :data-project="project.path" @click="emit('select')">
     <div class="name">
       <img v-if="nameIcon" class="name-icon" :src="nameIcon" alt="" />{{ project.name }}
     </div>
@@ -84,6 +86,20 @@ const editorTitle = (e: EditorView): string =>
 }
 .project-card.selected {
   border-color: var(--accent);
+}
+.project-card.compact {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 6px 12px;
+}
+.project-card.compact .name {
+  min-width: 160px;
+}
+.project-card.compact .footer {
+  flex: 1;
+  margin-top: 0;
 }
 .name {
   font-weight: 600;

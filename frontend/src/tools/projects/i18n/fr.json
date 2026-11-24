@@ -8,6 +8,12 @@
     "newProject": "Nouveau projet"
   },
   "breadcrumb": "Emplacement",
+  "view": {
+    "label": "Affichage",
+    "cards": "Cartes",
+    "list": "Liste",
+    "tree": "Arborescence"
+  },
   "folder": {
     "open": "Ouvrir le dossier {name} dans l'explorateur",
     "openTitle": "Ouvrir dans l'explorateur",

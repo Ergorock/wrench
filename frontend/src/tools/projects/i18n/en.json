@@ -8,6 +8,12 @@
     "newProject": "New project"
   },
   "breadcrumb": "Location",
+  "view": {
+    "label": "View",
+    "cards": "Cards",
+    "list": "List",
+    "tree": "Tree"
+  },
   "folder": {
     "open": "Open the folder {name} in Explorer",
     "openTitle": "Open in Explorer",
